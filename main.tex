@@ -163,12 +163,12 @@ for $0 < x < 1$ and $t > 0$. We emply the following initial condition
 \begin{equation}
     u_1(0,x) = \cos \pi x
 \end{equation}
-and the following boundry conditions
+and the boundary conditions
 
 \begin{equation}
     \partial_x u_1(t,0) = \partial_x u_1(t,1) = u_2(t,0) = u_2(t,1) = 0. 
 \end{equation}
-This system is solved in the paper \cite{benhammoudaAnalyticalSolutionsSystems2014} with the solution
+This system is solved analytically in the paper \cite{benhammoudaAnalyticalSolutionsSystems2014} where the find the exact solution
 
 \begin{equation}
     \begin{split}
@@ -190,15 +190,34 @@ Consider the PDAE given by
         0 & = u_1 \sin \pi x + u_2 \cos \pi x - e^{-t}
     \end{split}
 \end{equation}
-on the intervals $0 < x < 1$, $t > 0$. We employ the following initial conditions
+on the intervals $0 < x < 1$, $t > 0$. We require the initial conditions
 
 \begin{equation}
     \begin{split}
         u_1(0,x) & = \sin \pi x \\
         \partial_t u_1(0,x) & = -\sin \pi x \\
-        u_2(0,x)
+        u_2(0,x) & = -\sin \pi x \\
+        \partial_t u_2(0,x) & = -\cos \pi x
     \end{split}
 \end{equation}
+and the boundary conditions
+
+\begin{equation}
+    \begin{split}
+        u_1(t,0) & = u_1(t,1) = 0 \\
+        u_2(t,0) & = -u_2(t,1) = e^{-t}. 
+    \end{split}
+\end{equation}
+The exact solution to this system is given by 
+
+\begin{equation}
+    \begin{split}
+        u_1(t,x) & = e^{-t}\sin \pi x \\
+        u_2(t,x) & = e^{-t}\cos \pi x \\
+        u_3(t,x) & = (1+\pi^2)e^{-t}
+    \end{split}
+\end{equation}
+for $0 \le x \le 1$, $t \ge 0$. 
 
 \end{example}
 
