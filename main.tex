@@ -25,7 +25,10 @@
 \newtheorem{example}[theorem]{Example}
 \numberwithin{equation}{section}
 
-\newcommand{\Julia}{\texttt{Julia}}
+\newcommand{\Julia}{\texttt{Julia} }
+
+% \usepackage{lineno}
+% \linenumbers
 
 %\jname{Physics/Math}
 \articletype{CAPSTONE PROJECT}
@@ -97,9 +100,9 @@ Consider $x \in \Omega$ and let $u(x)$ be a regular function and $N(x,w)$ be a n
 
 \end{theorem}
 
-\subsection{Solving ODEs with Physics-Informed Neural Networks}
+\section{Solving ODEs with Physics-Informed Neural Networks}
 
-\section{Solving PDEs with \texttt{NeuralPDE.jl} using SciML}
+\section{Solving PDEs with Physics-Informed Neural Networks}
 
 We now turn out attention to solving partial different equations using techniques from scientific machine learning. We will use the package \texttt{NeuralPDE.jl} \cite{zubovNeuralPDEAutomatingPhysicsInformed2021} to solve some examples. 
 
@@ -143,7 +146,61 @@ for some scaler $\alpha$. As we simply want to minimize this integral, there is 
 \begin{equation}
 	\int_{\Omega} ||f(N(x,w); \lambda)||\,dx = \sum_i \alpha_i ||f(x_i)||\,dx.
 \end{equation}
-In the implementation via \texttt{NeuralPDE.jl}, a neural network is solved via \texttt{Integrals.jl} which calls the \Julia differential equation solver \cite{rackauckasDifferentialEquationsJlPerformant2017} to find the correct sampling points $x_i$ and weights $\alpha_i$. 
+In the implementation via \texttt{NeuralPDE.jl}, a neural network is solved via \texttt{Integrals.jl} which calls the \Julia differential equation solver \cite{rackauckasDifferentialEquationsJlPerformant2017} to find the correct sampling points $x_i$ and weights $\alpha_i$ in an implementation of Gaussian quadrature rules. 
+
+\begin{example}
+
+Consider the system of PDEs given by 
+
+\begin{equation}
+    \begin{split}
+        \partial_t u_1 & = \partial_x^2 u_1 - u_2 \partial_x u_1 + u_1^2 - 2\int_0^1 u_1^2 \,dx \\
+        0 & = \partial_x u_2 - u_1
+    \end{split}
+\end{equation}
+for $0 < x < 1$ and $t > 0$. We emply the following initial condition
+
+\begin{equation}
+    u_1(0,x) = \cos \pi x
+\end{equation}
+and the following boundry conditions
+
+\begin{equation}
+    \partial_x u_1(t,0) = \partial_x u_1(t,1) = u_2(t,0) = u_2(t,1) = 0. 
+\end{equation}
+This system is solved in the paper \cite{benhammoudaAnalyticalSolutionsSystems2014} with the solution
+
+\begin{equation}
+    \begin{split}
+        u_1(t,x) & = e^{-\pi^2t}\cos \pi x \\
+        u_2(t,x) & = \frac{1}{\pi}e^{-\pi^2t} \sin \pi x. 
+    \end{split}
+\end{equation}
+
+\end{example}
+
+\begin{example}
+
+Consider the PDAE given by 
+
+\begin{equation}
+    \begin{split}
+        \partial_t^2 u_1 & = \partial_x^2 u_1 + u_3 \sin \pi x \\
+        \partial_t^2 & = \partial_x^2 + u_3 \cos \pi x \\
+        0 & = u_1 \sin \pi x + u_2 \cos \pi x - e^{-t}
+    \end{split}
+\end{equation}
+on the intervals $0 < x < 1$, $t > 0$. We employ the following initial conditions
+
+\begin{equation}
+    \begin{split}
+        u_1(0,x) & = \sin \pi x \\
+        \partial_t u_1(0,x) & = -\sin \pi x \\
+        u_2(0,x)
+    \end{split}
+\end{equation}
+
+\end{example}
 
 \section{Conclusion}
 
@@ -157,7 +214,7 @@ In the implementation via \texttt{NeuralPDE.jl}, a neural network is solved via 
 Grateful for support of Pickett and Heaton + physics and mathematics EDU at LU! Huzzah!!
 
 \paragraph{Data Availability Statement}
-A statement about how to access data, code and other materials allowing users to understand, verify and replicate findings --- e.g. Replication data and code can be found in Harvard Dataverse: \verb+\url{https://doi.org/link}+.
+I'll upload all of my code to GitHub and put a link to that here!
 
 \bibliography{references}
 \bibliographystyle{ieeetr}
