@@ -57,7 +57,7 @@
 
 \keywords{SciML, Scientific Computing, ML/AI, PINN, PDEs}
 
-\abstract{Here is my abstract!}
+\abstract{Machine learning and artificial intelligence have been used with huge success in data science, mathematics, and physics as well as numerous other fields to solve complex or previously impossible computational problems. Computationally intensive problems in physics such as data analysis using a complex model and little data, or finding numerical solutions to differential equations have traditionally been solved with classical scientific computing techniques such as Taylor-series expansions or approximations using polynomials. Recent efforts have gone into replacing these techniques with neural networks and machine learning. Neural networks have the potential to fit any complex model or differential equation solution very accurately and can solve these problems quickly. In the following paper, I describe the basic principles of the growing field of Scientific Machine Learning (SciML). I will use the techniques I describe to solve the Einstein field equations to obtain the Schwarzschild metric using the package \texttt{NeuralPDE.jl} in the \Julia programming language. This example demonstrates the power a physics-informed neural network has in solving large, highly coupled, systems of partial differential equations. }
 
 \end{Frontmatter}
 
@@ -68,7 +68,9 @@
 
 \section{Introduction}
 
-Machine learning and scientific computing are two prominent fields with applications in physics, mathematics, and computer science. In the past several years, potential has been seen in combining the fields of machine learning and scientific computing to overcome two potential problems: lack of data, and solving diffenetial equations. \cite{karniadakisPhysicsinformedMachineLearning2021}
+Machine learning and scientific computing are two prominent fields with applications in physics, mathematics, and computer science. The initiative laid out by the DOE in 2019 outlines the importance and potential of the ever growing field of SciML \cite{bakerWorkshopReportBasic2019}. In this report SciML would seek to overcome two potential computational challenges: lack of data in analysis, and solving differential equations \cite{karniadakisPhysicsinformedMachineLearning2021}. 
+
+Below, I will describe how machine learning in tandem with scientific computing can solve both of these problems elegantly and efficiently. I will begin by outlining the basics of what machine learning is in section two. In sections three and four I will describe how to solve ODEs and PDEs with Physics-Informed Neural Networks (PINN). Finally, in section five I present a specific problem: solving Einstein's field equations to obtain the Schwarzchild Metric using the \Julia library \texttt{NeuralPDE.jl}. In the conclusions section I describe some future directions of this research and hopefully some suggestions? We shall see. 
 
 \section{Machine Learning}
 
@@ -148,6 +150,8 @@ for some scaler $\alpha$. As we simply want to minimize this integral, there is 
 \end{equation}
 In the implementation via \texttt{NeuralPDE.jl}, a neural network is solved via \texttt{Integrals.jl} which calls the \Julia differential equation solver \cite{rackauckasDifferentialEquationsJlPerformant2017} to find the correct sampling points $x_i$ and weights $\alpha_i$ in an implementation of Gaussian quadrature rules. 
 
+\subsection{Examples using \texttt{NeuralPDE.jl}}
+
 \begin{example}
 
 Consider the system of PDEs given by 
@@ -220,6 +224,10 @@ The exact solution to this system is given by
 for $0 \le x \le 1$, $t \ge 0$. 
 
 \end{example}
+
+\section{Solving Einstein's Field Equations to obtain the Schwarzschild Metric using \texttt{NeuralPDE.jl}}
+
+OG solution: \cite{schwarzschildGravitationalFieldMass1999}. Video I use: \cite{eigenchrisRelativity108aSchwarzschild}. 
 
 \section{Conclusion}
 
