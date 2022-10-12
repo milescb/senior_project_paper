@@ -49,7 +49,7 @@
 % \author[2]{Author Name2}\orcid{0000-0001-8823-831X}
 % \author[2]{Author Name3}\orcid{0000-0002-0251-345}
 
-\authormark{Cochran-Branson, M. \textit{et. al}}
+\authormark{M. Cochran-Branson}
 
 \address[1]{\orgdiv{Department of Physics and Mathematics}, \orgname{Lawrence University}, \orgaddress{\city{Appleton}, \state{WI}}}%, \postcode{54911}, \country{USA}}}
 
@@ -68,16 +68,22 @@
 
 \section{Introduction}
 
-Machine learning and scientific computing are two prominent fields with applications in physics, mathematics, and computer science. The initiative laid out by the DOE in 2019 outlines the importance and potential of the ever growing field of SciML \cite{bakerWorkshopReportBasic2019}. In this report SciML would seek to overcome two potential computational challenges: lack of data in analysis, and solving differential equations \cite{karniadakisPhysicsinformedMachineLearning2021}. 
+Machine learning and scientific computing are two prominent fields with applications in physics, mathematics, and computer science. An initiative laid out by the DOE in 2019 outlines the importance and potential of the ever growing field of SciML \cite{bakerWorkshopReportBasic2019}. In this report, they indicate the challenges that SciML could potentially solve: lack of data in analysis, and solving differential equations. In the first case, in problems where data is either expensive or impossible to collect, implementations of machine learning become impossible. This can be overcome if we can incorporate physics knowledge of the system into the neural network. Such implementations make use of \emph{Physics-Informed Neural Networks} (PINN) \cite{karniadakisPhysicsinformedMachineLearning2021}. It turns out that PINN can also solve differential equations by slight modification of the process used above. In fact, we can include data into solving of differential equations to better fit a model or aid in solving the equation(s). 
 
-Below, I will describe how machine learning in tandem with scientific computing can solve both of these problems elegantly and efficiently. I will begin by outlining the basics of what machine learning is in section two. In sections three and four I will describe how to solve ODEs and PDEs with Physics-Informed Neural Networks (PINN). Finally, in section five I present a specific problem: solving Einstein's field equations to obtain the Schwarzchild Metric using the \Julia library \texttt{NeuralPDE.jl}. In the conclusions section I describe some future directions of this research and hopefully some suggestions? We shall see. 
+Below, I will describe how machine learning in tandem with scientific computing can solve both of these problems elegantly and efficiently. I will begin by outlining the basics of what machine learning is in section two. In sections three and four I will describe how to solve ODEs and PDEs with Physics-Informed Neural Networks (PINN). Finally, in section five I present a specific problem: solving Einstein's field equations to obtain the Schwarzschild Metric using the \Julia library \texttt{NeuralPDE.jl}. In the conclusions section I describe some future directions of this research and hopefully some suggestions? We shall see. 
 
 \section{Machine Learning}
 
+Machine learning and artificial intelligence are prominent features of our everyday life from personalized advertisements to facial recognition software. Machine learning is also a powerful analytical tool in scientific research, in particular with model development and validation. Below, I will describe how neural networks can be trained to make predictions and give some motivation for why neural networks are well suited for function approximation. 
 
 \subsection{Neural Networks}
 
-A neural network is simply a function. 
+A neural network is simply a function composed of layers of matrix multiplication. As input, a neural networks take a matrix with size of number of obervables by number of data points and gives as an output a vector of weights. Thus, our network takes the form
+
+\begin{equation}
+    f : \mathbb{R}^{n\times m} \rightarrow \mathbb{R}^{\ell}
+\end{equation}
+where $n$ is the number of parameters for each data point $m$ and $\ell$ is the number of desired output features. Networks have a fixed size defined by the number of \emph{hidden layers} and the number of \emph{nodes} each hidden layer has. 
 
 \begin{figure}
 \centering
@@ -85,6 +91,17 @@ A neural network is simply a function.
 \caption{An example of a simple neural network with two inputs, one hidden layer with three nodes, and a single output. The network is defined by the weights connecting the layers which are represented as matrices. At each node, the weights are passed to a function called the \emph{activation function} which scales the weights appropriately. In principle, the size of the network can change in every dimension. }
 \label{fig:NNexample}
 \end{figure}
+
+Hidden layers cannot be directly accessed in the training process and are thus so named. A node within a layer describes a connection point between layers. Connections are achieved via a multiplication by a weight stored in the network. Modification of these weights changes the way in which nodes are connected to each other and thus how inputs are interpreted by the network. At each node, the weight passed to the node is modified by an \emph{activation function}. These typically modify the weight such that each weight is not linearly connected to each other. This allows us to describe a more complex input space more accurately \cite{dubeyActivationFunctionsDeep2022}. Some examples of activation functions include the sigmoid defined by 
+
+\begin{equation}
+    \sigma(w) = \frac{1}{1 + e^{-w}},
+\end{equation}
+$\tanh(w)$, and LSTM defined by $f(w) = \textrm{max}\{0,x\}$ where in each case $w$ is the weight provided by the previous layer. In the work that follows, we typically use a sigmoid activation function. 
+
+An example of a simple neural network with one hidden layer is shown in Fig. \ref{fig:NNexample}. This network has one input dimension and, as shown in the graphic, we feed one data point $X$ with two features $x_1, x_2$ into the network. Parameters of the network are stored in the matrix $W_0$ such that when we do the multiplication $X W_0$ we get a vector of three values corresponding to the three nodes of the single hidden layer. The activation function is now applied to these values. We then multiply by the weights $W_1$ to get our output of a single value which is passed to one final activation function. In most cases, the activation in the final node is the identity function $f(x) = x$. Notice that we can have as many inputs, layers, nodes, and output nodes as we would like. Scaling up the amount of hidden layers will increase the weights of the matrix significantly. 
+
+Now that we have built some neural network, we would like to have it make some useful predictions! This involves picking some special set of weights through a process called training. 
 
 \subsection{Training Neural Networks}
 
