@@ -18,6 +18,8 @@
 \usepackage{lipsum}
 \usepackage[colorlinks,allcolors=blue]{hyperref}
 
+\usepackage{jlcode} % for rendering Julia code
+
 \newtheorem{theorem}{Theorem}[section]
 \newtheorem{lemma}[theorem]{Lemma}
 \theoremstyle{definition}
@@ -174,7 +176,9 @@ for some scaler $\alpha$. As we simply want to minimize this integral, there is 
 \end{equation}
 In the implementation via \texttt{NeuralPDE.jl}, a neural network is solved via \texttt{Integrals.jl} which calls the \Julia differential equation solver \cite{rackauckasDifferentialEquationsJlPerformant2017} to find the correct sampling points $x_i$ and weights $\alpha_i$ in an implementation of Gaussian quadrature rules. 
 
-\subsection{Examples using \texttt{NeuralPDE.jl}}
+\subsection{Example using \texttt{NeuralPDE.jl}}
+
+We show how \texttt{NeuralPDE.jl} can be used to solve a simple example and describe the important components of the code. 
 
 \begin{example}
 
@@ -206,6 +210,92 @@ This system is solved analytically in the paper \cite{benhammoudaAnalyticalSolut
 \end{equation}
 
 Let's now solve this problem using \texttt{NeuralPDE.jl}. We begin by importing the required packages from \Julia, defining the variables and parameters of the system, and defining the equation, boundary conditions, and domains over which we want to solve. 
+
+\begin{jllisting}
+using NeuralPDE, ModelingToolkit, Lux, Domainsets
+using Optimization, OptimizationOptimisers
+import ModelingToolkit: Interval
+
+@parameters t x
+@variables u1(..) u2(..)
+
+Dx = Differential(x)
+Dxx = Differential(x)^2
+Dt = Differential(t)
+Ix = Integral(x in DomainSets.ClosedInterval(0, 1))
+
+eqns = [Dt(u1(t,x)) ~ Dxx(u1(t,x)) - u2(t,x)*Dx(u1(t,x)) + 
+                                        (u1(t,x))^2 - 2*Ix((u1(t,x))^2),
+        0 ~ Dx(u2(t,x)) - u1(t,x)]
+
+bcs = [u1(0,x) ~ cos(π*x),
+        Dx(u1(t,0)) ~ 0,
+        Dx(u1(t,1)) ~ 0,
+        u2(t,0) ~ 0,
+        u2(t,1) ~ 0
+]
+
+domains = [x ∈ Interval(0.0, 1.0),
+            t ∈ Interval(0.0, 1.0)]
+
+@named pde_sys = PDESystem(eqns, bcs, domains, [t,x], [u1(t,x), u2(t,x)])
+\end{jllisting}
+Notice that with the aid of the package \texttt{ModelingToolkit.jl}, we can symbolically represent the set-up of our problem. This is a feature of the SciML ecosystem of \Julia. 
+
+We then create a neural network using \texttt{Lux.jl} and pick a discretization to use. In this example we use the sigmoid as our activation function and build a network with one hidden layer of fifteen nodes. The input layer of our network must be the length of the number of parameters defined in our problem. Additionally, we use a different neural network for each solution $u_1$ and $u_2$ of our system, thus we define two neural networks with the set-up described above. The discretization we choose is the quadrature training method described above. 
+
+\begin{jllisting}
+dim = length(domains) # number of dimensions
+n = 15
+chains = [Lux.Chain(
+            Dense(dim, n, Lux.σ), 
+            Dense(n, n, Lux.σ), 
+            Dense(n, 1)) for _ in 1:2]
+
+strategy = QuadratureTraining()
+discretization = PhysicsInformedNN(chains, strategy)
+@time prob = discretize(pde_sys, discretization)
+\end{jllisting}
+
+We finally define a function to record the loss of our training and train the network
+
+\begin{jllisting}
+i = 0
+loss_history = []
+
+callback = function (p,l)
+    global i += 1
+    if i % 100 == 0
+        println("Current loss is: $l")
+    end
+    append!(loss_history, l)
+    return false
+end
+
+res = @time Optimization.solve(prob, ADAM(0.1); 
+                                callback = callback, maxiters=500)
+prob = remake(prob, u0=res.minimizer)
+res = @time Optimization.solve(prob, ADAM(0.01); 
+                                callback = callback, maxiters=2000)
+prob = remake(prob, u0=res.minimizer)
+res = @time Optimization.solve(prob, ADAM(0.0001); 
+                                callback = callback, maxiters=2000)
+\end{jllisting}
+For optimization we use the ADAM optimizer and vary the learning rate starting with a rate of 0.1 over 500 epochs, then 0.01 over 2000 epochs, then finally $10^{-4}$ over a final 2000 epochs. The loss over these epochs and learning rates is shown below
+
+\begin{center}
+    \includegraphics[width=0.3\linewidth]{figures/integral_PDE_plots/loss.png}
+\end{center}
+
+We can then plot the result of this training as shown below:
+
+\begin{center}
+    \includegraphics[width=0.48\linewidth]{figures/integral_PDE_plots/plot_u1.png}
+    \includegraphics[width=0.48\linewidth]{figures/integral_PDE_plots/plot_u2.png}
+\end{center}
+and we see that our numerical solution very closely matches the analytical solution. 
+
+For more information, see the data availibility statement. 
 
 \end{example}
 
@@ -266,8 +356,7 @@ OG solution: \cite{schwarzschildGravitationalFieldMass1999}. Video I use: \cite{
 
 Grateful for support of Pickett and Heaton + physics and mathematics EDU at LU! Huzzah!!
 
-\paragraph{Data Availability Statement}
-I'll upload all of my code to GitHub and put a link to that here!
+\paragraph{Data Availability Statement} All code presented above can be found here in GitHub at the following link \texttt{https://github.com/lvb5/solve\_PDEs\_with\_PINN}. 
 
 \bibliography{references}
 \bibliographystyle{ieeetr}
