@@ -402,7 +402,7 @@
 %
 \RequirePackage{ltxcmds}%
 \def\authororcid#1{%
-\ltx@ifpackageloaded{hyperref}{\href{https://orcid.org/#1}{\includegraphics{orcid_logo}}}{{\includegraphics{figures/orcid_logo}}}%
+\ltx@ifpackageloaded{hyperref}{\href{https://orcid.org/#1}{\includegraphics{figures/orcid_logo}}}{{\includegraphics{figures/orcid_logo}}}%
 }
 \newcommand{\orcid}[1]{\protect\g@addto@macro\artauthors{%
 \authororcid{#1}%
