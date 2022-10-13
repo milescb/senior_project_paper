@@ -57,7 +57,7 @@
 
 %\address[2]{\orgdiv{Division}, \orgname{Organization}, \orgaddress{\city{City}, \postcode{Pincode}, \state{State},  \country{Country}}. \email{name2@email.com}}
 
-\abstract{Machine learning and artificial intelligence have been used with huge success in data science, mathematics, and physics as well as numerous other fields to solve complex or previously impossible computational problems. Computationally intensive problems in physics such as data analysis using a complex model and little data, or finding numerical solutions to differential equations have traditionally been solved with classical scientific computing techniques such as Taylor-series expansions or approximations using polynomials. Recent efforts have gone into replacing these techniques with neural networks and machine learning. Neural networks have the potential to fit any complex model or differential equation solution very accurately and can solve these problems quickly. In the following paper, I describe the basic principles of the growing field of Scientific Machine Learning (SciML). I will use the techniques I describe to solve the Einstein field equations to obtain the Schwarzschild metric using the package \texttt{NeuralPDE.jl} in the \Julia programming language. This example demonstrates the power a physics-informed neural network has in solving large, highly coupled, systems of partial differential equations. }
+\abstract{Machine learning and artificial intelligence have been used with great success in data science, mathematics, and physics as well as numerous other fields to solve complex or previously impossible problems. Computationally intensive problems in physics such as data analysis using a complex model and little data, or finding numerical solutions to differential equations have traditionally been solved with classical scientific computing techniques such as Taylor-series expansions or approximations using polynomials. Recent efforts have gone into replacing these techniques with neural networks and machine learning. Neural networks have the potential to fit any complex model or differential equation solution very accurately and can solve these problems quickly. In the following paper, we describe the basic principles of the growing field of Scientific Machine Learning (SciML). We will use the techniques we describe to solve the Einstein field equations to obtain the Schwarzschild metric using the package \texttt{NeuralPDE.jl} in the \Julia programming language. This example demonstrates the power a physics-informed neural network has in solving large, highly coupled systems of partial differential equations. }
 
 \keywords{SciML, Scientific Computing, ML/AI, PINN, PDEs}
 
@@ -71,9 +71,14 @@
 
 \section{Introduction}
 
-Machine learning and scientific computing are two prominent fields with applications in physics, mathematics, and computer science. An initiative laid out by the DOE in 2019 outlines the importance and potential of the ever growing field of SciML \cite{bakerWorkshopReportBasic2019}. In this report, they indicate the challenges that SciML could potentially solve: lack of data in analysis, and solving differential equations. In the first case, in problems where data is either expensive or impossible to collect, implementations of machine learning become impossible. This can be overcome if we can incorporate physics knowledge of the system into the neural network. Such implementations make use of \emph{Physics-Informed Neural Networks} (PINN) \cite{karniadakisPhysicsinformedMachineLearning2021}. It turns out that PINN can also solve differential equations by slight modification of the process used above. In fact, we can include data into solving of differential equations to better fit a model or aid in solving the equation(s). 
+An initiative laid out by the DOE in 2019 outlines the importance and potential of the ever growing field of SciML \cite{bakerWorkshopReportBasic2019}. In this report, they indicate the computational challenges SciML could potentially solve: lack of data in analysis, and solving differential equations. In the first case, in problems where data is either expensive or impossible to collect, implementations of machine learning become impossible. This can be overcome if we can incorporate physics knowledge of the system into the neural network. Such implementations make use of \emph{Physics-Informed Neural Networks} (PINN) \cite{karniadakisPhysicsinformedMachineLearning2021}. Moreover, PINN can additionally solve differential equations by slight modification of the process used above. In fact, we can even combine these two techniques by including data into solving differential equations to better fit a model or aid in solving the equation(s). 
 
-Below, I will describe how machine learning in tandem with scientific computing can solve both of these problems elegantly and efficiently. I will begin by outlining the basics of what machine learning is in section two. In sections three and four I will describe how to solve ODEs and PDEs with Physics-Informed Neural Networks (PINN). Finally, in section five I present a specific problem: solving Einstein's field equations to obtain the Schwarzschild Metric using the \Julia library \texttt{NeuralPDE.jl}. In the conclusions section I describe some future directions of this research and hopefully some suggestions? We shall see. 
+A robust implementation of many of these techniques has been underway in the \Julia programing languages. Packages that make use of machine learning are part of the \texttt{SciML.jl} universe which includes a basic syntax for code and basic functions in using SciML (ADD RESOURCE). Because of the rapidly growing nature of this field, documentation on how the techniques are used and the new tools available are not easy to access. This paper seeks to fill in some of the gaps, describing succinctly how SciML can be used to solve differential equations. In particular, we put the newly-released package \texttt{NeuralPDE.jl} to the test to solve the Einstein Field equations. 
+
+In section two, we will outline the basics of what machine learning is. In sections three and four we will describe how to solve ODEs and PDEs with Physics-Informed Neural Networks (PINN). Finally, in section five we present a specific problem: solving Einstein's field equations to obtain the Schwarzschild Metric using the \Julia library \texttt{NeuralPDE.jl}. 
+
+ADD HERE ONCE COMPLETED:
+In the conclusions section I describe some future directions of this research and hopefully some suggestions? We shall see. Also findings?
 
 %% ---------------------------------------------------------------
 %% SECTION: MACHINE LEARNING
@@ -87,26 +92,26 @@ Machine learning and artificial intelligence are prominent features of our every
 
 \subsection{Neural Networks}
 
-A neural network is simply a function composed of layers of matrix multiplication. As input, a neural networks take a matrix with size of number of obervables by number of data points and gives as an output a vector of weights. Thus, our network takes the form
+A neural network is simply a function composed of layers of matrix multiplication. As input, a neural network take a matrix with size of number of features in each data point by number of data points and gives as an output a vector of weights. Thus, our network takes the form
 
 \begin{equation}
     N : \mathbb{R}^{n\times m} \rightarrow \mathbb{R}^{\ell}
 \end{equation}
-where $n$ is the number of parameters for each data point $m$ and $\ell$ is the number of desired output features. Networks have a fixed size defined by the number of \emph{hidden layers} and the number of \emph{nodes} each hidden layer has. 
+where $n$ is the number of features for each data point, $m$ is the total number of datapoints, and $\ell$ is the number of desired output features. Networks have a fixed size defined by the number of \emph{hidden layers} and the number of \emph{nodes} each hidden layer has. 
 
-Hidden layers cannot be directly accessed in the training process and are thus so named. A node within a layer describes a connection point between layers. Connections are achieved via a multiplication by a weight stored in the network. Modification of these weights changes the way in which nodes are connected to each other and thus how inputs are interpreted by the network. At each node, the weight passed to the node is modified by an \emph{activation function}. These typically modify the weight such that each weight is not linearly connected to each other. This allows us to describe a more complex input space more accurately \cite{dubeyActivationFunctionsDeep2022a}. Some examples of activation functions include the sigmoid defined by 
+Hidden layers are composed of nodes which cannot be directly accessed in the training process. A node within a layer describes a connection point between layers. Connections are achieved via a multiplication by a weight stored in the network. Modification of these weights changes the way in which nodes are connected to each other and thus how inputs are interpreted by the network. At each node, the weight passed to the node is modified by an \emph{activation function}. These typically modify the weight such that each weight is not linearly connected to each other. This allows us to describe a more complex input space more accurately \cite{dubeyActivationFunctionsDeep2022a}. Some examples of activation functions include the sigmoid defined by 
 
 \begin{equation}
     \sigma(w) = \frac{1}{1 + e^{-w}},
 \end{equation}
-$\tanh(w)$, and LSTM defined by $f(w) = \textrm{max}\{0,x\}$ where in each case $w$ is the weight provided by the previous layer. In the work that follows, we typically use a sigmoid activation function. 
+the hyperbolic tangent $\tanh(w)$, and LSTM defined by $f(w) = \textrm{max}\{0,x\}$ where in each case $w$ are the weights of the network. In examples present later, we typically use a sigmoid activation function. 
 
-An example of a simple neural network with one hidden layer is shown in Fig. \ref{fig:NNexample}. This network has one input dimension and, as shown in the graphic, we feed one data point $X$ with two features $x_1, x_2$ into the network. Parameters of the network are stored in the matrix $W_0$ such that when we do the multiplication $X W_0$ we get a vector of three values corresponding to the three nodes of the single hidden layer. The activation function is now applied to these values. We then multiply by the weights $W_1$ to get our output of a single value which is passed to one final activation function. In most cases, the activation in the final node is the identity function $f(x) = x$. Notice that we can have as many inputs, layers, nodes, and output nodes as we would like. Scaling up the amount of hidden layers will increase the weights of the matrix significantly. The network described above is typically called a \emph{feed-forward} neural network as there are no cycles between nodes and no reference to nodes previously touched. There are more complex neural networks such as recurrent neural networks which have these features, however, we will not use these in our work.
+An example of a simple neural network with one hidden layer is shown in Fig. \ref{fig:NNexample}. This network has one input dimension and, as shown in the graphic, we feed one data point $X$ with two features $x_1, x_2$ into the network. Parameters of the network are stored in the matrix $W_0$ such that when we do the multiplication $X W_0$ we get a vector of three values corresponding to the three nodes of the single hidden layer. The activation function is now applied to these values. We then multiply by the weights $W_1$ to get our output of a single value which is passed to one final activation function. In most cases, the activation in the final node is the identity function $f(x) = x$. Notice that we can have as many inputs, layers, nodes, and output nodes as we would like. The network described above is typically called a \emph{feed-forward} neural network as there are no cycles between nodes and no reference to nodes previously touched. There are more complex neural networks such as recurrent neural networks which have these features, however, we will not use these in our work.
 
 \begin{figure}
 \centering
 \includegraphics[width=0.7\linewidth]{figures/NN_example.png}
-\caption{An example of a simple neural network with two inputs, one hidden layer with three nodes, and a single output. The network is defined by the weights connecting the layers which are represented as matrices. At each node, the weights are passed to a function called the \emph{activation function} which scales the weights appropriately. In principle, the size of the network can change in every dimension. }
+\caption{An example of a simple neural network with two inputs, one hidden layer with three nodes, and a single output. The network is defined by the weights connecting the layers which are represented as matrices. At each node, the weights are passed to a function called the activation function which scales the weights appropriately. In principle, the size of the network can change in every dimension. }
 \label{fig:NNexample}
 \end{figure}
 
@@ -125,17 +130,17 @@ In order to train a neural network, we need a way in which to evaluate how well 
 Such a function is defined such that the smaller the output value, the better the network performs. Thus, training a neural network becomes an optimization problem where we want to minimize the function $L(w)$ where $w$ are the weights of our network. 
 
 %% Add paper on: local vs global minimum, how optimization problems work, etc
-For a very basic idea of how this works, imagine the space defined by $L$ as a surface with some collection of local minima. We want to find a minimum, so we need to travel in the direction of a minimum. Intuitively, we can take the gradient and then travel in the direction of the negative gradient to go ``downhill". We then update the weights of the network, re-evaluate the loss, and move again in the ``downhill" direction. This process is called gradient descent and the process of finding the desired weights is called backpropogation (\textbf{ADD REFERENCE}). Because in some cases, learning can get stuck in a saddle point or small local minimum, we often use stochastic methods which allow us to get out of such cases and continue learning to a minimum. This process is called stochastic gradient descent. In the following examples, we will use the ADAM optimizer which uses stochastic methods to find a minimum \cite{kingmaAdamMethodStochastic2017}. 
+For a very basic idea of how this works, imagine the space defined by $L$ as a surface with some collection of minima. We want to find a minimum, so we need to travel in the direction of a minimum. Intuitively, we can take the gradient and then travel in the direction of the negative gradient to go ``downhill". We then update the weights of the network, re-evaluate the loss, and move again in the ``downhill" direction. This process is called gradient descent and the process of finding the desired weights is called backpropogation (\textbf{ADD REFERENCE}). Because in some cases, learning can get stuck in a saddle point or small local minimum, we often use stochastic methods which allow us to get out of such cases and continue learning to a minimum. This process is called stochastic gradient descent. In the following examples, we will use the ADAM optimizer which uses stochastic methods to find a minimum \cite{kingmaAdamMethodStochastic2017}. 
 
 %% SUBSECTION: THE UAT %%
 
 \subsection{The Universal Approximation Theorem}
 
-One natural question in using neural networks to solve differential equations, is why this method works or why even it has a chance of working. The answer comes down to a famous theorem in machine learning: the Universal Approximation Theorem (UAT). This is stated simply as 
+One natural question in using neural networks to solve differential equations, is why this method works or why even it has a chance of working. The answer comes down to a famous theorem in machine learning: the Universal Approximation Theorem (UAT):
 
 \begin{theorem}
 
-Let $x \in \Omega$, let $u(x)$ be a regular function, and $N(x,w)$ be a neural network with weights $w$. Then we can find some arbitrarily small $\epsilon \in \Omega$ such that 
+Let $x \in \Omega$, let $u(x)$ be a regular function, and $N(x,w)$ be a neural network with weights $w$. Then, we can find some arbitrarily small $\epsilon \in \Omega$ such that 
 
 \begin{equation}
 	||N(x,w) - u(x)|| < \epsilon. 
@@ -147,7 +152,7 @@ Let $x \in \Omega$, let $u(x)$ be a regular function, and $N(x,w)$ be a neural n
 
 There is, however, one big caveat to this theorem: nothing about the problem tells us how big our network should be in order to fulfill the theorem. In some cases, the size of the network may be computationally infeasible to model. Nonetheless, it is this theorem which allows us to be able to have some hope that differential equations can be arbitrarily approximated by neural networks. 
 
-In the rest of the paper, we describe how the technicalities of solving differential equations with neural networks, starting with ODEs and moving on to solving PDEs. 
+In the rest of the paper, we describe the technicalities for solving differential equations with neural networks, starting with ODEs and moving on to solving PDEs. 
 
 %% ---------------------------------------------------------------
 %% SECTION: SOLVING ODES WITH PINN
@@ -168,20 +173,22 @@ The UAT tells us that we should be able to achieve $N(w,t) = u(t)$ where $N(w,t)
 In order to find a unique solution, we apply the initial condition $u(0) = u_0$. We can simply add this to our loss function as 
 
 \begin{equation}
-	L(p) = (N(w,0) - u_0)^2 + \sum_i \left( \frac{dN(w,t_i)}{dt} - f(N(w,t_i), t_i)\right)^2
+	L(p) = (N(w,0) - u_0)^2 + \sum_i \left( \frac{dN(w,t_i)}{dt} - f(N(w,t_i), t_i),\right)^2
 \end{equation}
-or, we can parametrize the function to learn on, encoding the initial condition in our neural network solution by defining the function 
+or we can parametrize the function to learn on, encoding the initial condition in our neural network solution by defining the function 
 
 \begin{equation}
 	g(w,t) = u_0 - tN(w,t).
 \end{equation}
-This ensures that the initial condition is satisfied and allows us to write down a simpler version of the loss function given by 
+This ensures that the initial condition is satisfied and allows us to write down a simpler version of the loss function:
 
 \begin{equation}
 	L(w) = \sum_i \left(\frac{dg(w,t_i)}{dt} - f(g(w,t_i), t_i)\right)^2. 
 \end{equation}
 
 Now that we have defined our problem, we can use standard techniques to solve simple ODEs. For more information and further examples see \cite{rackauckasSciMLSciMLBookParallel}. 
+
+\subsection{Example ODE problem solved with PINN}
 
 \begin{example}
 	
@@ -195,12 +202,12 @@ with the initial condition $u(0) = 0.1$. Notice that we can find the solution to
 \begin{equation}
 	u(t) = \int e^t \cos t \, dt. 
 \end{equation}
-Applying parts twice, we find the solution
+Applying integration by parts twice, we find the solution
 
 \begin{equation}
 	u(t) = \frac{1}{2}e^t(\sin t + \cos t) + C
 \end{equation}
-where we find that $C = -0.4$ by applying the initial condition. 
+where $C = -0.4$ via use of the initial condition. 
 
 Let's now solve using the techniques defined above using \Julia and the machine learning package \texttt{Flux.jl}. We begin by defining a neural network with two hidden layers one of 64 nodes the other with 32 nodes using the $\tanh$ activation function and a linear output: 
 
@@ -212,7 +219,7 @@ NNODE = Chain(x -> [x], # Take in a scalar and transform it into an array
            Dense(32,1),
            first) # Take first value, i.e. return a scalar
 \end{jllisting}
-We then parametrize the solution and define the loss function where the differential is computed via discretization:
+We then parametrize the solution and define the loss function in which the differential is computed via discretization:
 
 \begin{jllisting}
 g(t) = t*NNODE(t) + 0.1
@@ -221,7 +228,7 @@ using Statistics
 ϵ = sqrt(eps(Float32))
 loss() = mean(abs2(((g(t+ϵ)-g(t))/ϵ) - (exp(t) * cos(t))) for t in 0:1f-2:5f0)
 \end{jllisting}
-Notice that we use machine $\epsilon$ here to discretize our integral as this is the smallest possible discretization. We will use gradient descent to solve with a learning rate of $10^-4$ over $10^4$ epochs. Because there is no data we are providing to train on, we feed the network empty data. Instead, all of the learning information comes from the loss function defined above. This is accomplished with the following code
+Notice that we use machine $\epsilon$ here to discretize our integral as this is the smallest possible meaningful discretization. We will use gradient descent to solve with a learning rate of $10^{-4}$ over $10^4$ epochs. Because there is no data we are providing to train on, we feed the network empty data. Instead, all of the learning information comes from the loss function defined above. This is accomplished with the following code:
 
 \begin{jllisting}
 epochs = 10_000
@@ -241,7 +248,7 @@ end
 display(loss())
 Flux.train!(loss, Flux.params(NNODE), data, opt; cb=cb)
 \end{jllisting}
-We can then see how our network does in comparison to the true solution as shown in the below plot
+We can then see how our network does in comparison to the true solution as shown in the below plot:
 
 \begin{center}
 \includegraphics[width=0.45\linewidth]{figures/ODE_example.png}
@@ -263,7 +270,7 @@ Consider a partial differential equation given by
 \begin{equation}
 	f(u(x); \lambda) = 0
 \end{equation}
-where $x \in \Omega$ are the independent variables in the space $\Omega$, $u(x)$ is the solution, $f$ is some non-linear function acting on $u$ and $\lambda$ are the parameters of the equation. To solve with a neural network $N(x, w)$ where $N$ is a neural network with weights $w$, we want to fulfill 
+where $x \in \Omega$ are the independent variables in the space $\Omega$, $u(x)$ is the solution, $f$ is some non-linear function acting on $u$, and $\lambda$ are the parameters of the equation. To solve with a neural network $N(x, w)$ where $N$ is a neural network with weights $w$, we want to fulfill 
 
 \begin{equation}
 	f(N(x, w); \lambda) \approx 0.
@@ -275,7 +282,7 @@ The universal approximation theorem tells us that this should be possible. The e
 	L(w) = \int_{\Omega} ||f(N(x,w); \lambda)||\,dx. 
 	\label{eqn:NNloss}
 \end{equation}
-We have suggestively named the error $L$ as we can use this function as a loss function in training our neural network $N$ by attempting to minimize $L$. Our computational problem then reduces to the problem of evaluating the integral in Eqn. \ref{eqn:NNloss}. Notice that in practical problems, we apply boundary conditions $b_i$ on $\partial \Omega \in \Omega$. In order to use these in our neural network, we add in these conditions to our loss function giving us 
+We have suggestively named the error $L$ as we can use this function as a loss function in training our neural network $N$ by minimizing $L$. Our computational problem then reduces to the problem of evaluating the integral in Eqn. \ref{eqn:NNloss}. Notice that in practical problems, we apply boundary conditions $b_i$ on $\partial \Omega \in \Omega$. In order to use these in our neural network, we add in these conditions to our loss function giving us 
 
 \begin{equation}
 	L(w) = \sum_i\int_{\Omega\setminus\partial\Omega} ||f_i(N(x,w); \lambda)||\,dx + \sum_i\int_{\partial\Omega} ||b_i(N(x,w); \lambda)||\,dx.
@@ -298,7 +305,7 @@ for some scaler $\alpha$. As we simply want to minimize this integral, there is 
 \begin{equation}
 	\int_{\Omega} ||f(N(x,w); \lambda)||\,dx = \sum_i \alpha_i ||f(x_i)||\,dx.
 \end{equation}
-In the implementation via \texttt{NeuralPDE.jl}, a neural network is solved via \texttt{Integrals.jl} which calls the \Julia differential equation solver \cite{rackauckasDifferentialEquationsJlPerformant2017} to find the correct sampling points $x_i$ and weights $\alpha_i$ in an implementation of Gaussian quadrature rules. 
+In the implementation via \texttt{NeuralPDE.jl}, this is accomplised using the \texttt{Integrals.jl} package which calls the \Julia differential equation solver \cite{rackauckasDifferentialEquationsJlPerformant2017} to find the correct sampling points $x_i$ and weights $\alpha_i$ in an implementation of Gaussian quadrature rules. 
 
 \subsection{Example using \texttt{NeuralPDE.jl}}
 
@@ -314,7 +321,7 @@ Consider the system of PDEs given by
         0 & = \partial_x u_2 - u_1
     \end{split}
 \end{equation}
-for $0 < x < 1$ and $t > 0$. This system is a simplification of the Navier-Stokes equations solve by (\textbf{ADD RESOURCE + DESCRIPTION})We employ the following initial condition
+for $0 < x < 1$ and $t > 0$. This system is a simplification of the Navier-Stokes equations solved by (\textbf{ADD RESOURCE + DESCRIPTION}) We employ the following initial condition
 
 \begin{equation}
     u_1(0,x) = \cos \pi x
@@ -419,7 +426,7 @@ We can then plot the result of this training as shown below:
 \end{center}
 and we see that our numerical solution very closely matches the analytical solution. 
 
-For more information, see the data availibility statement. 
+For more information, see the data availability statement. 
 
 \end{example}
 
@@ -428,6 +435,12 @@ For more information, see the data availibility statement.
 %% ---------------------------------------------------------------
 
 \section{Solving Einstein's Field Equations to obtain the Schwarzschild Metric using \texttt{NeuralPDE.jl}}
+
+\subsection{Physics Background and Problem Set-up}
+
+\subsection{Technical Implementation}
+
+\subsection{Results and Discussion}
 
 OG solution: \cite{schwarzschildGravitationalFieldMass1999}. Video I use: \cite{eigenchrisRelativity108aSchwarzschild}. 
 
