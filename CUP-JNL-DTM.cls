@@ -402,7 +402,7 @@
 %
 \RequirePackage{ltxcmds}%
 \def\authororcid#1{%
-\ltx@ifpackageloaded{hyperref}{\href{https://orcid.org/#1}{\includegraphics{orcid_logo}}}{{\includegraphics{orcid_logo}}}%
+\ltx@ifpackageloaded{hyperref}{\href{https://orcid.org/#1}{\includegraphics{orcid_logo}}}{{\includegraphics{figures/orcid_logo}}}%
 }
 \newcommand{\orcid}[1]{\protect\g@addto@macro\artauthors{%
 \authororcid{#1}%
@@ -610,7 +610,7 @@ properly cited.
 %% Opening Page Style      
 \def\ps@titlepage{%
      \def\@oddhead{{\hbox to \textwidth{%
-      \vbox to 0pt{\vskip-5pt\rlap{\hbox to \textwidth{\hfill\includegraphics[scale=.5]{LU_logo}
+      \vbox to 0pt{\vskip-5pt\rlap{\hbox to \textwidth{\hfill\includegraphics[scale=.5]{figures/LU_logo}
     %   \quad\includegraphics{DataMath_Logo}
       \hspace*{-1pt}}}}%
       \vbox to 0pt{\vskip-7pt\rlap{\parbox{\textwidth}{\opheaderfont\begin{tabular*}{\textwidth}[b]{@{\extracolsep{\fill}}@{}l@{}}%
