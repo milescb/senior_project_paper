@@ -73,7 +73,7 @@
 
 An initiative laid out by the DOE in 2019 outlines the importance and potential of the ever growing field of SciML \cite{bakerWorkshopReportBasic2019}. In this report, they indicate the computational challenges SciML could potentially solve: lack of data in analysis, and solving differential equations. In the first case, in problems where data is either expensive or impossible to collect, implementations of machine learning become impossible. This can be overcome if we can incorporate physics knowledge of the system into the neural network. Such implementations make use of \emph{Physics-Informed Neural Networks} (PINN) \cite{karniadakisPhysicsinformedMachineLearning2021}. Moreover, PINN can additionally solve differential equations by slight modification of the process used above. In fact, we can even combine these two techniques by including data into solving differential equations to better fit a model or aid in solving the equation(s). 
 
-A robust implementation of many of these techniques has been underway in the \Julia programing languages. Packages that make use of machine learning are part of the \texttt{SciML.jl} universe which includes a basic syntax for code and basic functions in using SciML (ADD RESOURCE). Because of the rapidly growing nature of this field, documentation on how the techniques are used and the new tools available are not easy to access. This paper seeks to fill in some of the gaps, describing succinctly how SciML can be used to solve differential equations. In particular, we put the newly-released package \texttt{NeuralPDE.jl} to the test to solve the Einstein Field equations. 
+A robust implementation of many of these techniques has been underway in the \Julia programing languages. Packages that make use of machine learning are part of the \texttt{SciML.jl} universe which includes a basic syntax for code and basic functions in using SciML. Further information on the SciML universe can be found in last year's SciML Con \cite{SciMLCon2022}. Because of the rapidly growing nature of this field, documentation on how the techniques are used and the new tools available are not easy to access. This paper seeks to fill in some of the gaps, describing succinctly how SciML can be used to solve differential equations. In particular, we put the newly-released package \texttt{NeuralPDE.jl} to the test to solve the Einstein Field equations. 
 
 In section two, we will outline the basics of what machine learning is. In sections three and four we will describe how to solve ODEs and PDEs with Physics-Informed Neural Networks (PINN). Finally, in section five we present a specific problem: solving Einstein's field equations to obtain the Schwarzschild Metric using the \Julia library \texttt{NeuralPDE.jl}. 
 
@@ -130,7 +130,7 @@ In order to train a neural network, we need a way in which to evaluate how well 
 Such a function is defined such that the smaller the output value, the better the network performs. Thus, training a neural network becomes an optimization problem where we want to minimize the function $L(w)$ where $w$ are the weights of our network. 
 
 %% Add paper on: local vs global minimum, how optimization problems work, etc
-For a very basic idea of how this works, imagine the space defined by $L$ as a surface with some collection of minima. We want to find a minimum, so we need to travel in the direction of a minimum. Intuitively, we can take the gradient and then travel in the direction of the negative gradient to go ``downhill". We then update the weights of the network, re-evaluate the loss, and move again in the ``downhill" direction. This process is called gradient descent and the process of finding the desired weights is called backpropogation (\textbf{ADD REFERENCE}). Because in some cases, learning can get stuck in a saddle point or small local minimum, we often use stochastic methods which allow us to get out of such cases and continue learning to a minimum. This process is called stochastic gradient descent. In the following examples, we will use the ADAM optimizer which uses stochastic methods to find a minimum \cite{kingmaAdamMethodStochastic2017}. 
+For a very basic idea of how this works, imagine the space defined by $L$ as a surface with some collection of minima. We want to find a minimum, so we need to travel in the direction of a minimum. In most cases, it is not necessary to find the global minimum and may even be computationally disadvantageous as finding global minimum can lead to over-fitting \cite{choromanskaLossSurfacesMultilayer2015}. Intuitively, we can take the gradient and then travel in the direction of the negative gradient to go ``downhill". We then update the weights of the network, re-evaluate the loss, and move again in the ``downhill" direction. This process is called gradient descent and the process of finding the desired weights is called backpropogation \cite{chauvinBackpropagationTheoryArchitectures1995}. Because in some cases, learning can get stuck in a saddle point or small local minimum, we often use stochastic methods which allow us to get out of such cases and continue learning to a minimum. This process is called stochastic gradient descent. In the following examples, we will use the ADAM optimizer which uses stochastic methods to find a minimum \cite{kingmaAdamMethodStochastic2017}. 
 
 %% SUBSECTION: THE UAT %%
 
@@ -148,7 +148,7 @@ Let $x \in \Omega$, let $u(x)$ be a regular function, and $N(x,w)$ be a neural n
 
 \end{theorem}
 
-\noindent Proofs of this theorem are beyond the scope of this report, but can be found here: (\textbf{ADD RESOURCE}). 
+\noindent Proofs of this theorem are beyond the scope of this report, but are readily availible for several different contexts including for classical feed-forward networks \cite{hornikMultilayerFeedforwardNetworks1989, hornikApproximationCapabilitiesMultilayer1991}, finding probability distributions \cite{luUniversalApproximationTheorem2020}, and complex-valued neural networks \cite{voigtlaenderUniversalApproximationTheorem2020}. 
 
 There is, however, one big caveat to this theorem: nothing about the problem tells us how big our network should be in order to fulfill the theorem. In some cases, the size of the network may be computationally infeasible to model. Nonetheless, it is this theorem which allows us to be able to have some hope that differential equations can be arbitrarily approximated by neural networks. 
 
@@ -321,7 +321,7 @@ Consider the system of PDEs given by
         0 & = \partial_x u_2 - u_1
     \end{split}
 \end{equation}
-for $0 < x < 1$ and $t > 0$. This system is a simplification of the Navier-Stokes equations solved by (\textbf{ADD RESOURCE + DESCRIPTION}) We employ the following initial condition
+for $0 < x < 1$ and $t > 0$. This system arises as a simplification of the Navier-Stokes equations in an infinitely-long channel \cite{buddBlowupSystemPartial1994}. We employ the following initial condition
 
 \begin{equation}
     u_1(0,x) = \cos \pi x
