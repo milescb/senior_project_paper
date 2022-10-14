@@ -17,9 +17,9 @@
 \usepackage{xcolor}
 \usepackage{lipsum}
 \usepackage[colorlinks,allcolors=blue]{hyperref}
-
 \usepackage{jlcode} % for rendering Julia code
 
+%% formatting
 \newtheorem{theorem}{Theorem}[section]
 \newtheorem{lemma}[theorem]{Lemma}
 \theoremstyle{definition}
@@ -27,8 +27,10 @@
 \newtheorem{example}[theorem]{Example}
 \numberwithin{equation}{section}
 
+% define how to display Julia
 \newcommand{\Julia}{\texttt{Julia} }
 
+% Add line numbers
 % \usepackage{lineno}
 % \linenumbers
 
@@ -57,7 +59,8 @@
 
 %\address[2]{\orgdiv{Division}, \orgname{Organization}, \orgaddress{\city{City}, \postcode{Pincode}, \state{State},  \country{Country}}. \email{name2@email.com}}
 
-\abstract{Machine learning and artificial intelligence have been used with great success in data science, mathematics, and physics as well as numerous other fields to solve complex or previously impossible problems. Computationally intensive problems in physics such as data analysis using a complex model and little data, or finding numerical solutions to differential equations have traditionally been solved with classical scientific computing techniques such as Taylor-series expansions or approximations using polynomials. Recent efforts have gone into replacing these techniques with neural networks and machine learning. Neural networks have the potential to fit any complex model or differential equation solution very accurately and can solve these problems quickly. In the following paper, we describe the basic principles of the growing field of Scientific Machine Learning (SciML). We will use the techniques we describe to solve the Einstein field equations to obtain the Schwarzschild metric using the package \texttt{NeuralPDE.jl} in the \Julia programming language. This example demonstrates the power a physics-informed neural network has in solving large, highly coupled systems of partial differential equations. }
+\abstract{Machine learning and artificial intelligence have been used with great success in data science, mathematics, and physics as well as numerous other fields to solve complex or previously impossible problems. Computationally intensive problems in physics such as data analysis using a complex model and little data, or finding numerical solutions to differential equations have traditionally been solved with classical scientific computing techniques such as Taylor-series expansions or approximations using polynomials. Recent efforts have gone into replacing these techniques with neural networks and machine learning. Neural networks have the potential to fit any complex model or differential equation solution very accurately and can solve these problems quickly. In the following paper, we describe the basic principles of the growing field of Scientific Machine Learning (SciML).
+(THIS WILL LIKELY CHANGE WITH MATURITY OF THE PROJECT): We will use the techniques we describe to solve the Einstein field equations to obtain the Schwarzschild metric using the package \texttt{NeuralPDE.jl} in the \Julia programming language. This example demonstrates the power a physics-informed neural network has in solving large, highly coupled systems of partial differential equations. }
 
 \keywords{SciML, Scientific Computing, ML/AI, PINN, PDEs}
 
@@ -458,7 +461,7 @@ OG solution: \cite{schwarzschildGravitationalFieldMass1999}. Video I use: \cite{
 
 \paragraph{Acknowledgments}
 
-Grateful for support of Pickett and Heaton + physics and mathematics EDU at LU! Huzzah!!
+I am very grateful for the mentorship of Alex Heaton and Megan Pickett in working on this project. Additionally, none of this would have been possible without the education I have received at Lawrence University. I would like to thank the Physics and Mathematics department for their support and all of the opportunities I have had through both departments. 
 
 \paragraph{Data Availability Statement} All code presented above can be found here in GitHub at the following link \texttt{https://github.com/lvb5/solve\_PDEs\_with\_PINN}. 
 
