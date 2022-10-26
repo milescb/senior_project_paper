@@ -95,21 +95,21 @@ Machine learning and artificial intelligence are prominent features of our every
 
 \subsection{Neural Networks}
 
-A neural network is simply a function composed of layers of matrix multiplication. As input, a neural network take a matrix with size of number of features in each data point by number of data points and gives as an output a vector of weights. Thus, our network takes the form
+A neural network is simply a function. This function is composed primarily of layers of matrix multiplication, but also includes non-linear components, and optionally addition of biases \cite{strangLinearAlgebraLearning2019, bishopPatternRecognitionMachine2006}. As input, a neural network can take a scalar, vector, matrix, or sometimes tensor with a user-specified size / dimension and gives as an output a vector or scalar of weights. Thus, our network takes the form
 
 \begin{equation}
-    N : \mathbb{R}^{n\times m} \rightarrow \mathbb{R}^{\ell}
+    N : \mathbb{R}^{N} \rightarrow \mathbb{R}^{\ell}
 \end{equation}
-where $n$ is the number of features for each data point, $m$ is the total number of datapoints, and $\ell$ is the number of desired output features. Networks have a fixed size defined by the number of \emph{hidden layers} and the number of \emph{nodes} each hidden layer has. 
+where $N$ is the user-defined input space, and $\ell$ is the number of desired output features. Networks have a fixed size defined by the number of \emph{hidden layers} and the number of \emph{nodes} each hidden layer has. 
 
-Hidden layers are composed of nodes which cannot be directly accessed in the training process. A node within a layer describes a connection point between layers. Connections are achieved via a multiplication by a weight stored in the network. Modification of these weights changes the way in which nodes are connected to each other and thus how inputs are interpreted by the network. At each node, the weight passed to the node is modified by an \emph{activation function}. These typically modify the weight such that each weight is not linearly connected to each other. This allows us to describe a more complex input space more accurately \cite{dubeyActivationFunctionsDeep2022a}. Some examples of activation functions include the sigmoid defined by 
+Hidden layers are composed of nodes which cannot be directly accessed in the training process. A node within a layer describes a connection point between layers. Connections are achieved via a multiplication by a weight stored in the network. Modification of these weights changes the way in which nodes are connected to each other and thus how inputs are interpreted by the network. At each node, the weight passed to the node is modified by a non-linear function called the \emph{activation function}. This allows us to describe a complex input space more accurately \cite{dubeyActivationFunctionsDeep2022a}. Some examples of activation functions include the sigmoid defined by 
 
 \begin{equation}
     \sigma(w) = \frac{1}{1 + e^{-w}},
 \end{equation}
-the hyperbolic tangent $\tanh(w)$, and LSTM defined by $f(w) = \textrm{max}\{0,x\}$ where in each case $w$ are the weights of the network. In examples present later, we typically use a sigmoid activation function. 
+the hyperbolic tangent $\tanh(w)$, and LSTM defined by $f(w) = \textrm{max}\{0,x\}$ where in each case $w$ are a vector of weights of the network at a node. In examples presented later, we typically use a sigmoid activation function. 
 
-An example of a simple neural network with one hidden layer is shown in Fig. \ref{fig:NNexample}. This network has one input dimension and, as shown in the graphic, we feed one data point $X$ with two features $x_1, x_2$ into the network. Parameters of the network are stored in the matrix $W_0$ such that when we do the multiplication $X W_0$ we get a vector of three values corresponding to the three nodes of the single hidden layer. The activation function is now applied to these values. We then multiply by the weights $W_1$ to get our output of a single value which is passed to one final activation function. In most cases, the activation in the final node is the identity function $f(x) = x$. Notice that we can have as many inputs, layers, nodes, and output nodes as we would like. The network described above is typically called a \emph{feed-forward} neural network as there are no cycles between nodes and no reference to nodes previously touched. There are more complex neural networks such as recurrent neural networks which have these features, however, we will not use these in our work.
+An example of a simple neural network with one hidden layer is shown in Fig. \ref{fig:NNexample}. This network has one input dimension and, as shown in the graphic, we feed one data point $X$ with two features $x_1, x_2$ into the network. Parameters of the network are stored in the matrix $W_0$ such that when we do the multiplication $X W_0$ we get a vector of three values corresponding to the three nodes of the single hidden layer. The activation function is now applied to these values and optionally a bias vector can be added to these modified weights. We then multiply by the weights $W_1$ to get our output of a single value which is passed to one final activation function. In most cases, the activation in the final node is the identity function $f(x) = x$. Notice that we can have as many inputs, layers, nodes, and output nodes as we would like. The network described above is typically called a \emph{feed-forward} neural network as there are no cycles between nodes and no reference to nodes previously touched. There are more complex neural networks such as recurrent neural networks which have these features, however, we will not use these in our work.
 
 \begin{figure}
 \centering
@@ -125,16 +125,18 @@ An example of a simple neural network with one hidden layer is shown in Fig. \re
 
 Now that we have built some neural network, we would like to have it make some useful predictions! This involves picking a set of special weights through a process called training. 
 
-In order to train a neural network, we need a way in which to evaluate how well the network is doing. This is achieved with a \emph{loss function}. The loss function takes the output of the network given a certain input and returns a number, thus, our loss function is of the form
+In order to train a neural network, we need a way in which to evaluate how well the network is doing. This is achieved with a \emph{loss function}. The loss function takes an input of all of the parameters of the network that can change, $X$, and outputs a single number, thus, our loss function is of the form
 
-Don't write this! $L(x)$ where $x$ are the parameters of the network
 \begin{equation}
-    L : \mathbb{R}^{\ell} \rightarrow \mathbb{R}. 
+    L : \mathbb{R}^{\textrm{size}(X)} \rightarrow \mathbb{R}. 
 \end{equation}
-Such a function is defined such that the smaller the output value, the better the network performs. Thus, training a neural network becomes an optimization problem where we want to minimize the function $L(w)$ where $w$ are the weights of our network. 
+Such a function is defined such that the smaller the output value, the better the network performs. Thus, training a neural network becomes an optimization problem where we want to minimize the function $L(X)$. Typically, the space $X$ is composed of the weights and biases of the network leaving the structure of the network intact. 
 
-%% Add paper on: local vs global minimum, how optimization problems work, etc
-For a very basic idea of how this works, imagine the space defined by $L$ as a surface with some collection of minima. We want to find a minimum, so we need to travel in the direction of a minimum. In most cases, it is not necessary to find the global minimum and may even be computationally disadvantageous as finding global minimum can lead to over-fitting \cite{choromanskaLossSurfacesMultilayer2015}. Intuitively, we can take the gradient and then travel in the direction of the negative gradient to go ``downhill". We then update the weights of the network, re-evaluate the loss, and move again in the ``downhill" direction. This process is called gradient descent and the process of finding the desired weights is called backpropogation \cite{chauvinBackpropagationTheoryArchitectures1995}. Because in some cases, learning can get stuck in a saddle point or small local minimum, we often use stochastic methods which allow us to get out of such cases and continue learning to a minimum. This process is called stochastic gradient descent. In the following examples, we will use the ADAM optimizer which uses stochastic methods to find a minimum \cite{kingmaAdamMethodStochastic2017}. 
+For a very basic idea of how this works, imagine the space defined by $L$ as a surface with some collection of minima. We want to find a minimum, so we need to travel in the direction of a minimum. In most cases, it is not necessary to find the global minimum and may even be computationally disadvantageous as finding global minimum can lead to over-fitting \cite{choromanskaLossSurfacesMultilayer2015}. Intuitively, we can take the gradient and then travel in the direction of the negative gradient to go ``downhill". 
+
+More specifically, we travel in the $-\nabla L(X)$ direction taking discrete steps of size $\Delta x$. After each step we update the network parameters, re-evaluate the loss, compute $-\nabla L(X)$ and repeat. We continue in this way for as many steps as the user desires. This process is called gradient descent and the process of finding the desired weights is called backpropogation \cite{chauvinBackpropagationTheoryArchitectures1995}. 
+
+Because in some cases, learning can get stuck in a saddle point or small local minimum, we often use stochastic methods which allow us to get out of such cases and continue learning to a minimum. This process is called stochastic gradient descent. In the following examples, we will use the ADAM optimizer which uses stochastic methods to find a minimum \cite{kingmaAdamMethodStochastic2017}. 
 
 %% SUBSECTION: THE UAT %%
 
