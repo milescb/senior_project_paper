@@ -319,7 +319,72 @@ We show how \texttt{NeuralPDE.jl} can be used to solve a simple example and desc
 
 \begin{example}
 
-Consider the system of PDEs given by 
+Consider the homogeneous system of linear PDEs given by
+    
+\end{example}
+
+\subsection{Solving Similarity Solution of Navier-Stokes using \texttt{NeuralPDE.jl}}
+
+In the 1994 paper investigating the Blow-up of solutions to Navier-Stokes equations, Budd \textit{et al.} consider the system of PDEs arising from the geometry of an infinite channel \cite{buddBlowupSystemPartial1994}. In particular, they explore the parabolic partial differential equations perturbed from a similarity solution of the Navier-Stokes given by
+
+\begin{equation}
+\begin{split}
+    \partial_t u_1 + \mu u_2 \partial_x u_1 & = \partial^2_{x} u_1 + u_1^2 - K^2, \,\,\,\,\,\,\,\, 0 < x < 1, 0 < t < T \\
+    \partial_x u_2 & = u, \,\,\,\,\,\,\,\, 0 < x < 1, 0 < t < T
+    \label{eqn:ns_problem}
+\end{split}
+\end{equation}
+with the boundary conditions 
+
+\begin{equation}
+    \partial_x u_1(t,0) = \partial_x u_1(t,1) = u_2(t,0) = u_2(t,1) = 0
+\end{equation}
+and initial condition 
+
+\begin{equation}
+    u_1(x,0) = u_0(x).  
+\end{equation}
+These equations are parameterized by $\mu$, which perturbs the equations from Navier-Stokes. It is the goal of the paper to determine for which values of $\mu$ the solutions ``blow up." We will consider exclusively the case where $\mu = 1$, as this has a nice solution and the resulting system arises from the Navier Stokes equations in the following form:
+
+\subsubsection{Problem Derivation}
+
+We consider the incompressible Navier-Stokes equations in an infinitely long channel in the $x$- and $z$-direction and finite in the $y$ direction; namely we bound $y$ by $0 < y < 1$. Let $u_1, u_2, u_3$ be velocity fields, $1/\nu$ be the Reynolds number, and $p$ be the pressure. Then, Navier-Stokes equations read
+
+\begin{equation}
+    \begin{split}
+        \partial_t u_1 - u_1^2 + u_2\partial_yu_1 & = \nu \partial_y^2 u_1 - c(t) \\
+        \partial_t u_2 + u_2 \partial_y u_2 & = \nu \partial_y^2 u_2 - \partial_y p \\
+        \partial_t u_3 - u_3^2 + u_2\partial_y u_3 & = \nu \partial_y^2 u_3 - e(t) \\
+        \partial_y u_2 & = u_1 + u_3. 
+    \end{split}
+\end{equation}
+In order to simplify, let $u_3(y,t) = 0$, $e(t) = 0$ and $\nu = 1$ so that our system becomes 
+
+\begin{equation}
+    \begin{split}
+        \partial_t u_1 - u_1^2 + u_2\partial_yu_1 & = \nu \partial_y^2 u_1 - c(t) \\
+        \partial_t u_2 + u_2 \partial_y u_2 & = \nu \partial_y^2 u_2 - \partial_y p \\
+        \partial_y u_2 & = u_1. 
+    \end{split}
+\end{equation}
+Now note that $p(t)$ can be determined once we know $u_1, u_2$ from the above first and last equation. Hence, we write our system as 
+
+\begin{equation}
+    \begin{split}
+        \partial_t u_1 + u_2\partial_yu_1 & = \partial_y^2 u_1 + u_1^2 - c(t) \\
+        \partial_y u_2 & = u_1. 
+    \end{split}
+\end{equation}
+which matches Eqn. \ref{eqn:ns_problem} when $\mu = 1$ and under the condition that $y \rightarrow x$. In order to have a complete solution, we need only finding appropriate inital conditions. The condition $u_2(0,t) = u_2(1,t)$ follows naturally to disallow flow through the walls of the channel. In \cite{buddBlowupSystemPartial1994}, they also employ the boundary condition $\partial_y u_1 = 0$ to obtain the above complete initial conditions. Finally, we require $c(t) \ge 0$ so that we can write $c(t) = K^2$. 
+
+\subsubsection{Solution with PINN and comparison to analytical solution}
+
+Let's now solve this system! Notice that via integration by parts of the first equation in \ref{eqn:ns_problem} we get
+
+\begin{equation}
+    K^2 = 2\int_0^1 u_1^2 \, dx. 
+\end{equation}
+Thus, we solve the system
 
 \begin{equation}
     \begin{split}
@@ -327,17 +392,7 @@ Consider the system of PDEs given by
         0 & = \partial_x u_2 - u_1
     \end{split}
 \end{equation}
-for $0 < x < 1$ and $t > 0$. This system arises as a simplification of the Navier-Stokes equations in an infinitely-long channel \cite{buddBlowupSystemPartial1994}. We employ the following initial condition
-
-\begin{equation}
-    u_1(0,x) = \cos \pi x
-\end{equation}
-and the boundary conditions
-
-\begin{equation}
-    \partial_x u_1(t,0) = \partial_x u_1(t,1) = u_2(t,0) = u_2(t,1) = 0. 
-\end{equation}
-This system is solved analytically in the paper \cite{benhammoudaAnalyticalSolutionsSystems2014} where they find the exact solution
+for $0 < x < 1$ and $0 < t < 1$. Using the same initial conditions as above, we set $u_0(x) = \cos \pi x$, coinciding with the analytical solution given in \cite{benhammoudaAnalyticalSolutionsSystems2014}. Using power-series methods, the authors find the analytical solution to the above system to be
 
 \begin{equation}
     \begin{split}
@@ -433,8 +488,6 @@ We can then plot the result of this training as shown below:
 and we see that our numerical solution very closely matches the analytical solution. 
 
 For more information, see the data availability statement. 
-
-\end{example}
 
 %% ---------------------------------------------------------------
 %% SECTION: SOLVING EFE
