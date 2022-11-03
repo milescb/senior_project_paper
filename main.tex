@@ -141,7 +141,7 @@ For a very basic idea of how this works, imagine the space defined by $\loss$ as
 
 \subsection{The Universal Approximation Theorem}
 
-One natural question in using neural networks to solve differential equations, is why this method works or why even it has a chance of working. The answer comes down to a famous theorem in machine learning: the Universal Approximation Theorem (UAT):
+A natural question when posing machine learning as a solution to PDEs is why this should work in the first place. The answer comes down to a famous theorem in machine learning: the Universal Approximation Theorem (UAT):
 
 \begin{theorem}
 
@@ -157,7 +157,7 @@ Let $x \in \Omega$, let $u(x)$ be a regular function, and $\net(x,w)$ be a neura
 
 There is, however, one big caveat to this theorem: nothing about the problem tells us how big our network should be in order to fulfill the theorem. In some cases, the size of the network may be computationally infeasible to model. Nonetheless, it is this theorem which allows us to be able to have some hope that differential equations can be arbitrarily approximated by neural networks. 
 
-In the rest of the paper, we describe the technicalities for solving differential equations with neural networks, starting with ODEs and moving on to solving PDEs. 
+In the rest of the paper, we take these theoretical concepts and apply them to the problem of solving differential equations, starting with ODEs and then moving to PDEs. 
 
 %% ---------------------------------------------------------------
 %% SECTION: SOLVING ODES WITH PINN
@@ -191,9 +191,9 @@ This ensures that the initial condition is satisfied and allows us to write down
 	\loss(w) = \sum_i \left(\frac{dg(w,t_i)}{dt} - f(g(w,t_i), t_i)\right)^2. 
 \end{equation}
 
-Now that we have defined our problem, we can use standard techniques to solve minimization problems. For more information and further examples see \cite{rackauckasSciMLSciMLBookParallel}. 
+Now that we have defined our problem, we can use standard minimization techniques to find a solution. For more information and further examples see \cite{rackauckasSciMLSciMLBookParallel}. 
 
-\subsection{Example ODE problem solved with PINN}
+\subsection{Example ODE problem solved with a PINN}
 	
 Consider the equation
 
@@ -222,7 +222,7 @@ NNODE = Chain(x -> [x], # Take in a scalar and transform it into an array
            Dense(32,1),
            first) # Take first value, i.e. return a scalar
 \end{jllisting}
-We then parametrize the solution and define the loss function in which the differential is computed via discretization:
+We then parametrize the solution and define the loss function in which the differentiation is computed via discretization:
 
 \begin{jllisting}
 g(t) = t*NNODE(t) + 0.1
@@ -271,7 +271,7 @@ Consider a partial differential equation given by
 \begin{equation}
 	f(u(x); \lambda) = 0
 \end{equation}
-where $x \in \Omega$ are the independent variables in the space $\Omega$, $u(x)$ is the solution, $f$ is some non-linear function acting on $u$, and $\lambda$ are the parameters of the equation. To solve with a neural network $N(x, w)$ where $N$ is a neural network with weights $w$, we want to fulfill 
+where $x \in \Omega$ are the independent variables in the space $\Omega$, $u(x)$ is the solution, $f$ is some non-linear function acting on $u$, and $\lambda$ are the parameters of the equation. To solve with a neural network $\net(x, w)$ where $\net$ is a neural network with weights $w$, we want to fulfill 
 
 \begin{equation}
 	f(\net(x, w); \lambda) \approx 0.
@@ -283,7 +283,9 @@ The universal approximation theorem tells us that this should be possible. The e
 	\loss(w) = \int_{\Omega} ||f(\net(x,w); \lambda)||\,dx. 
 	\label{eqn:NNloss}
 \end{equation}
-We have suggestively named the error $L$ as we can use this function as a loss function in training our neural network $\net$ by minimizing $L$. Our computational problem then reduces to the problem of evaluating the integral in Eqn. \ref{eqn:NNloss}. Notice that in practical problems, we apply boundary conditions $b_i$ on $\partial \Omega \in \Omega$. In order to use these in our neural network, we add in these conditions to our loss function giving us 
+We have suggestively named the error $\loss$ as we can use this function as a loss function in training our neural network $\net$ by minimizing $\loss$. Our computational problem then reduces to the problem of evaluating the integral in Eqn. \ref{eqn:NNloss} in order to perform minimization. 
+
+Notice that in practical problems, we apply boundary conditions $b_i$ on $\partial \Omega \in \Omega$ in order to obtain, ideally, a unique solution. In order to include this information in the network, we add in these conditions to our loss function giving us 
 
 \begin{equation}
 	\loss(w) = \sum_i\int_{\Omega\setminus\partial\Omega} ||f_i(\net(x,w); \lambda)||\,dx + \sum_i\int_{\partial\Omega} ||b_i(\net(x,w); \lambda)||\,dx.
@@ -298,7 +300,7 @@ There are several different methods for evaluating the integral in Eqn. \ref{eqn
 \begin{equation}
 	\int_{\Omega} ||f(\net(x,w); \lambda)||\,dx = \sum_i \Delta V ||f(x_i)||.
 \end{equation}
-This method has two main disadvantages: 1) as the dimension of the problem increases, the number of points we sample increases exponentially in order to maintain the same granularity and 2) no evaluation of the integral is done between grid points, thus information can be quickly lost. To solve the second problem, we can use stochastic methods of sampling---i.e., use Monte Carlo techniques to evaluate the integral. This can be described by 
+This method has two main disadvantages: 1) as the dimension of the problem increases, the number of points we sample increases exponentially in order to maintain the same granularity and 2) no evaluation of the integral is done between grid points, thus information can be quickly lost. To solve the second problem, we can use stochastic methods of sampling---i.e., Monte Carlo techniques to evaluate the integral. This can be described by 
 
 \begin{equation}
 	\int_{\Omega} ||f(\net(x,w); \lambda)||\,dx = \alpha \sum_i ||f(x_i)||.
@@ -352,7 +354,7 @@ domains = [x ∈ Interval(0.0, 1.0),
 
 @named pde_sys = PDESystem(eqns, bcs, domains, [t,x], [u(t,x), v(t,x)])
 \end{jllisting}
-For systems of equations, store each equation as an element of the vector \texttt{eqn} as with the boundary conditions, \texttt{bcs}. We now define a neural network to solve the problem using the machine learning library \texttt{Lux.jl}. Our network has one hidden layer with 30 nodes, and takes two input variables for each parameter of the problem. We output a single number. Notice that each variable $u,v$ of our problem gets its own network. This is implemented simply as
+For systems of equations, store each equation as an element of the vector \texttt{eqn} as with the boundary conditions, \texttt{bcs}. We now define a neural network to solve the problem using the machine learning library \texttt{Lux.jl}. Our network has one hidden layer with 30 nodes, and takes two input variables---one for each parameter of the problem. We output a single number. Notice that each variable $u,v$ of our problem gets its own network. This is implemented simply as
 
 \begin{jllisting}
 dim = length(domains) # number of dimensions
@@ -399,7 +401,7 @@ loss_history = vcat(loss_history1, loss_history2, loss_history3)
 phi = discretization.phi
 \end{jllisting}
 
-The loss is displayed in Fig. \ref{fig:loss_linear} and the results of this are shown in Fig. \ref{fig:results_linear}. Notice the instability of the loss at higher learning rates. Fixing these instabilities is fixed with a lower learning rate as this requires that over each epoch movement in loss-space is limited. The results demonstrate that our learning was successful. 
+The loss is displayed in Fig. \ref{fig:loss_linear} and the results of the above learning are shown in Fig. \ref{fig:results_linear}. Notice the instability of the loss at higher learning rates. Fixing these instabilities is accomplished with a lower learning rate as this requires that over each epoch movement in loss-space is limited. The results demonstrate that our learning was successful. 
 
 \begin{figure}
 \centering
@@ -418,7 +420,7 @@ The loss is displayed in Fig. \ref{fig:loss_linear} and the results of this are 
 
 \subsection{Solving Similarity Solution of Navier-Stokes using \texttt{NeuralPDE.jl}}
 
-In the 1994 paper investigating the Blow-up of solutions to Navier-Stokes equations, Budd \textit{et al.} consider the system of PDEs arising from the geometry of an infinite channel \cite{buddBlowupSystemPartial1994}. In particular, they explore the parabolic partial differential equations perturbed from a similarity solution of the Navier-Stokes given by
+In the 1994 paper investigating the Blow-up of solutions to Navier-Stokes equations, Budd \textit{et al.} consider the system of PDEs arising from the Navier-Stokes equations under the geometry of an infinite channel \cite{buddBlowupSystemPartial1994}. In particular, they explore the parabolic partial differential equations perturbed from a similarity solution of the Navier-Stokes given by
 
 \begin{equation}
 \begin{split}
@@ -437,11 +439,11 @@ and initial condition
 \begin{equation}
     u_1(x,0) = u_0(x).  
 \end{equation}
-These equations are parameterized by $\mu$, which perturbs the equations from Navier-Stokes. It is the goal of the paper to determine for which values of $\mu$ the solutions ``blow up." We will consider exclusively the case where $\mu = 1$, as this has a nice solution and the resulting system arises from the Navier Stokes equations in the following form:
+These equations are parameterized by $\mu$, which perturbs the equations from Navier-Stokes. It is the goal of the paper to determine for which values of $\mu$ the solutions ``blow up." We will consider exclusively the case where $\mu = 1$, as this has a nice solution and the resulting system arises from the Navier Stokes equations as discussed below:
 
 \subsubsection{Problem Derivation}
 
-We consider the incompressible Navier-Stokes equations in an infinitely long channel in the $x$- and $z$-direction and finite in the $y$ direction; namely we bound $y$ by $0 < y < 1$. Let $u_1, u_2, u_3$ be velocity fields, $1/\nu$ be the Reynolds number, and $p$ be the pressure. Then, Navier-Stokes equations read
+We consider the incompressible Navier-Stokes equations in an infinitely long channel in the $x$- and $z$-direction and finite in the $y$ direction; namely we bound $y$ by $0 < y < 1$. Let $u_1, u_2, u_3$ be velocity fields, $1/\nu$ be the Reynolds number, and $p$ be the pressure. Then, the Navier-Stokes equations read
 
 \begin{equation}
     \begin{split}
@@ -459,8 +461,9 @@ In order to simplify, let $u_3(y,t) = 0$, $e(t) = 0$ and $\nu = 1$ so that our s
         \partial_t u_2 + u_2 \partial_y u_2 & = \nu \partial_y^2 u_2 - \partial_y p \\
         \partial_y u_2 & = u_1. 
     \end{split}
+\label{eqn:partial_system}
 \end{equation}
-Now note that $p(t)$ can be determined once we know $u_1, u_2$ from the above first and last equation. Hence, we write our system as 
+Now note that $p(t)$ can be determined once we know $u_1, u_2$ from the above first and last equation as the middle equation of Eqn. \ref{eqn:partial_system} is only dependent on $u_2$. Hence, we write our system as 
 
 \begin{equation}
     \begin{split}
