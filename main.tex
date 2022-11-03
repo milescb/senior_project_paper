@@ -135,8 +135,6 @@ Such a function is defined such that the smaller the output value, the better th
 
 For a very basic idea of how this works, imagine the space defined by $\loss$ as a surface with some collection of minima. We want to find a minimum, so we need to travel in the direction of one. Intuitively, we can take the gradient and then travel in the direction of the negative gradient to go ``downhill". More specifically, we travel in the $-\nabla \loss(X)$ direction taking discrete steps of size $\Delta x$. After each step we update the network parameters, re-evaluate the loss, compute $-\nabla \loss(X)$ and repeat. We continue in this way for as many steps as the user desires. This process is called gradient descent and the algorithm for finding the desired weights is called backpropogation \cite{chauvinBackpropagationTheoryArchitectures1995}. In most cases, it is not necessary to find the global minimum and may even be computationally disadvantageous as finding global minimum can lead to over-fitting \cite{choromanskaLossSurfacesMultilayer2015}. Because in some cases, learning can get stuck in a ``saddle point" or small local minimum, we often use stochastic methods which allow us to get out of such cases and continue learning to a minimum. This process is called stochastic gradient descent. In the following examples, we will use the ADAM optimizer which uses stochastic methods to find a minimum \cite{kingmaAdamMethodStochastic2017}. 
 
-
-
 %% SUBSECTION: THE UAT %%
 
 \subsection{The Universal Approximation Theorem}
@@ -514,7 +512,7 @@ For optimization we use the ADAM optimizer and vary the learning rate starting w
     \label{fig:loss_integro}
 \end{figure}
 
-\begin{figure}[]
+\begin{figure}
 \centering
     \includegraphics[width=0.48\linewidth]{figures/integral_PDE_plots/plot_u1.png}
     \includegraphics[width=0.48\linewidth]{figures/integral_PDE_plots/plot_u2.png}
