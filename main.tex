@@ -317,11 +317,107 @@ In the implementation via \texttt{NeuralPDE.jl}, this is accomplised using the \
 
 We show how \texttt{NeuralPDE.jl} can be used to solve a simple example and describe the important components of the code. 
 
-\begin{example}
-
 Consider the homogeneous system of linear PDEs given by
-    
-\end{example}
+
+\begin{equation}
+\begin{split}
+	\partial_t u + \partial_x v + (v + u) & = 0 \\
+	\partial_x u + \partial_t v + (v + u) & = 0
+\end{split}
+\end{equation}
+subject to the initial conditions 
+
+\begin{equation}
+	u(0,x) = \sinh x, \,\,\,\,\,\,\,\, v(0,x) = \cosh x. 
+\end{equation}    
+By means of the so-called Homotopy analysis method, the authors in \cite{samibatainehApproximateAnalyticalSolutions2008} find the analytical solution to this system to be given by 
+
+\begin{equation}
+	u(x,t) = \sinh(x - t), \,\,\,\,\,\,\,\, v(x,t) = \cosh(x - t). 
+\end{equation}
+
+We now solve with \texttt{NeuralPDE.jl}, describing important aspects of the code. To begin, we set up the system symbolically with the aid of \texttt{Modelingtoolkit.jl} as follows:
+
+\begin{jllisting}
+@parameters t x
+@variables u(..) v(..)
+
+Dx = Differential(x)
+Dt = Differential(t)
+
+eqns = [Dt(u(t,x)) - Dx(v(t,x)) + (u(t,x) + v(t,x)) ~ 0,
+        Dt(v(t,x)) - Dx(u(t,x)) + (u(t,x) + v(t,x)) ~ 0]
+
+bcs = [u(0,x) ~ sinh(x), v(0,x) ~ cosh(x)]
+
+domains = [x ∈ Interval(0.0, 1.0),
+            t ∈ Interval(0.0, 1.0)]
+
+@named pde_sys = PDESystem(eqns, bcs, domains, [t,x], [u(t,x), v(t,x)])
+\end{jllisting}
+For systems of equations, store each equation as an element of the vector \texttt{eqn} as with the boundary conditions, \texttt{bcs}. We now define a neural network to solve the problem using the machine learning library \texttt{Lux.jl}. Our network has one hidden layer with 30 nodes, and takes two input variables for each parameter of the problem. We output a single number. Notice that each variable $u,v$ of our problem gets its own network. This is implemented simply as
+
+\begin{jllisting}
+dim = length(domains) # number of dimensions
+n = 30
+chains = [Lux.Chain(
+            Dense(dim, n, Lux.σ), 
+            Dense(n, n, Lux.σ), 
+            Dense(n, 1)) for _ in 1:2]
+\end{jllisting}
+We then discretize the system using quadrature training as follows
+
+\begin{jllisting}
+strategy = QuadratureTraining()
+discretization = PhysicsInformedNN(chains, strategy)
+@time prob = discretize(pde_sys, discretization)
+\end{jllisting}
+After this is set-up and a loss function is defined through calling \texttt{PhysicsInformedNN}, we simply need to train the network to find a nice solution. This is done with the \texttt{Optimization.jl} library. We choose the ADAM optimizer over three learning rates: $10^{-3}, 10^{-4}$, and $10^{-7}$ over 10000, 7000, and 1000 epochs respectively. By training the network with successively smaller learning rates, we can improve the accuracy of the solution. This is accomplished in the following code:
+
+\begin{jllisting}
+i = 0
+loss_history = []
+
+callback = function (p,l) 
+	global i += 1
+	if i % 100 == 0
+		println("Current loss is: $l")
+	end
+    append!(loss_history, l)
+	return false 
+end
+
+learning_rates = [1e-3, 1e-4, 1e-7]
+res = @time Optimization.solve(prob, ADAM(learning_rates[1]); callback = callback, maxiters=10000)
+loss_history1 = loss_history
+loss_history = []
+prob = remake(prob, u0=res.minimizer)
+res = @time Optimization.solve(prob, ADAM(learning_rates[2]); callback = callback, maxiters=7000)
+loss_history2 = loss_history
+loss_history = []
+prob = remake(prob, u0=res.minimizer)
+res = @time Optimization.solve(prob, ADAM(learning_rates[3]); callback = callback, maxiters=1000)
+loss_history3 = loss_history
+loss_history = vcat(loss_history1, loss_history2, loss_history3)
+phi = discretization.phi
+\end{jllisting}
+
+The loss is displayed in Fig. \ref{fig:loss_linear} and the results of this are shown in Fig. \ref{fig:results_linear}. Notice the instability of the loss at higher learning rates. Fixing these instabilities is fixed with a lower learning rate as this requires that over each epoch movement in loss-space is limited. The results demonstrate that our learning was successful. 
+
+\begin{figure}
+\centering
+	\includegraphics[width=0.4\linewidth]{figures/linear_homo_PDE_plots/loss.png}
+	\caption{Value of loss as a function of epoch for the linear system of homogenous PDEs. Three stages of learning are represented with the learning rate labeled. While there are some instabilities in the loss, we ultimately find a nice solution with the final learning rate of $10^{-7}$}
+	\label{fig:loss_linear}
+\end{figure}
+
+\begin{figure}
+\centering
+	\includegraphics[width=0.48\linewidth]{figures/linear_homo_PDE_plots/solution_1.png}
+	\includegraphics[width=0.48\linewidth]{figures/linear_homo_PDE_plots/solution_2.png}
+	\caption{Results of training a neural network to learn the solution of the linear homogenous PDE. Solution $u$ is represented by $u_1$ and $v$ by $u_2$. In both cases, numerical and analytic solutions are shown as well as the difference between numerical and analytic defined by $|u_{numerical} - u_{analytic}|$}
+	\label{fig:results_linear}
+\end{figure}
 
 \subsection{Solving Similarity Solution of Navier-Stokes using \texttt{NeuralPDE.jl}}
 
@@ -401,93 +497,32 @@ for $0 < x < 1$ and $0 < t < 1$. Using the same initial conditions as above, we 
     \end{split}
 \end{equation}
 
-Let's now solve this problem using \texttt{NeuralPDE.jl}. We begin by importing the required packages from \Julia, defining the variables and parameters of the system, and defining the equation, boundary conditions, and domains over which we want to solve. 
+We can then solve the problem using \texttt{NeuralPDE.jl}. This differs from the above code only in the definition of an integral through \texttt{Modelingtoolkit.jl} which can simply be done with
 
 \begin{jllisting}
-using NeuralPDE, ModelingToolkit, Lux, Domainsets
-using Optimization, OptimizationOptimisers
-import ModelingToolkit: Interval
-
-@parameters t x
-@variables u1(..) u2(..)
-
-Dx = Differential(x)
-Dxx = Differential(x)^2
-Dt = Differential(t)
 Ix = Integral(x in DomainSets.ClosedInterval(0, 1))
-
-eqns = [Dt(u1(t,x)) ~ Dxx(u1(t,x)) - u2(t,x)*Dx(u1(t,x)) + 
-                                        (u1(t,x))^2 - 2*Ix((u1(t,x))^2),
-        0 ~ Dx(u2(t,x)) - u1(t,x)]
-
-bcs = [u1(0,x) ~ cos(π*x),
-        Dx(u1(t,0)) ~ 0,
-        Dx(u1(t,1)) ~ 0,
-        u2(t,0) ~ 0,
-        u2(t,1) ~ 0
-]
-
-domains = [x ∈ Interval(0.0, 1.0),
-            t ∈ Interval(0.0, 1.0)]
-
-@named pde_sys = PDESystem(eqns, bcs, domains, [t,x], [u1(t,x), u2(t,x)])
-\end{jllisting}
-Notice that with the aid of the package \texttt{ModelingToolkit.jl}, we can symbolically represent the set-up of our problem. This is a feature of the SciML ecosystem of \Julia. 
-
-We then create a neural network using \texttt{Lux.jl} and pick a discretization to use. In this example we use the sigmoid as our activation function and build a network with one hidden layer of fifteen nodes. The input layer of our network must be the length of the number of parameters defined in our problem. Additionally, we use a different neural network for each solution $u_1$ and $u_2$ of our system, thus we define two neural networks with the set-up described above. The discretization we choose is the quadrature training method described above. 
-
-\begin{jllisting}
-dim = length(domains) # number of dimensions
-n = 15
-chains = [Lux.Chain(
-            Dense(dim, n, Lux.σ), 
-            Dense(n, n, Lux.σ), 
-            Dense(n, 1)) for _ in 1:2]
-
-strategy = QuadratureTraining()
-discretization = PhysicsInformedNN(chains, strategy)
-@time prob = discretize(pde_sys, discretization)
 \end{jllisting}
 
-We finally define a function to record the loss of our training and train the network
+In this example we use the sigmoid as our activation function and build a network with one hidden layer of fifteen nodes. The input layer of our network must be the length of the number of parameters defined in our problem. Additionally, we use a different neural network for each solution $u_1$ and $u_2$ of our system, thus we define two neural networks with the set-up described above. The discretization we choose is the quasi random training with 100 points (ADD MORE DESCRIPTION!!). 
 
-\begin{jllisting}
-i = 0
-loss_history = []
+For optimization we use the ADAM optimizer and vary the learning rate starting with a rate of 0.1 over 500 epochs, then 0.01 over 2000 epochs, then finally $10^{-4}$ over a final 2000 epochs. The loss over these epochs and learning rates can be seen in Fig. \ref{fig:loss_integro} and the solution can be seen in Fig. \ref{fig:integro_results}.
 
-callback = function (p,l)
-    global i += 1
-    if i % 100 == 0
-        println("Current loss is: $l")
-    end
-    append!(loss_history, l)
-    return false
-end
+\begin{figure}
+\centering
+    \includegraphics[width=0.4\linewidth]{figures/integral_PDE_plots/loss.png}
+    \caption{Loss as a function of epoch in training a neural network to learn the solution of the integral PDE presented above. Learning is broken up into three sections with differing learning rate as shown}
+    \label{fig:loss_integro}
+\end{figure}
 
-res = @time Optimization.solve(prob, ADAM(0.1); 
-                                callback = callback, maxiters=500)
-prob = remake(prob, u0=res.minimizer)
-res = @time Optimization.solve(prob, ADAM(0.01); 
-                                callback = callback, maxiters=2000)
-prob = remake(prob, u0=res.minimizer)
-res = @time Optimization.solve(prob, ADAM(0.0001); 
-                                callback = callback, maxiters=2000)
-\end{jllisting}
-For optimization we use the ADAM optimizer and vary the learning rate starting with a rate of 0.1 over 500 epochs, then 0.01 over 2000 epochs, then finally $10^{-4}$ over a final 2000 epochs. The loss over these epochs and learning rates is shown below
-
-\begin{center}
-    \includegraphics[width=0.3\linewidth]{figures/integral_PDE_plots/loss.png}
-\end{center}
-
-We can then plot the result of this training as shown below:
-
-\begin{center}
+\begin{figure}[]
+\centering
     \includegraphics[width=0.48\linewidth]{figures/integral_PDE_plots/plot_u1.png}
     \includegraphics[width=0.48\linewidth]{figures/integral_PDE_plots/plot_u2.png}
-\end{center}
-and we see that our numerical solution very closely matches the analytical solution. 
+    \caption{Results of training a network to learn the solution of the integral PDE. Both numerical and analytical solutions are given with the difference between the two. We see that the numerical solution matches the analytic solution very well.}
+    \label{fig:integro_results}
+\end{figure}
 
-For more information, see the data availability statement. 
+To see the complete implementation of the above, see the data availability statement. 
 
 %% ---------------------------------------------------------------
 %% SECTION: SOLVING EFE
@@ -495,9 +530,9 @@ For more information, see the data availability statement.
 
 \section{Solving Einstein's Field Equations to obtain the Schwarzschild Metric using \texttt{NeuralPDE.jl}}
 
-\subsection{Physics Background and Problem Set-up}
+We find a numerical solution to Einstein's field equations under a few assumptions to yield the Schwarzschild Metric as first described by Schwarzschild in 1916 \cite{schwarzschildGravitationalFieldMass1999}. 
 
-We find a solution to Einstein's field equations under a few assumptions to yield the Schwarzschild Metric as first described by Schwarzschild in 1916 \cite{schwarzschildGravitationalFieldMass1999}. 
+\subsection{Physics Background and Problem Set-up}
 
 Einsteins field equations are given by 
 
