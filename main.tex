@@ -18,6 +18,7 @@
 \usepackage{lipsum}
 \usepackage[colorlinks,allcolors=blue]{hyperref}
 \usepackage{jlcode} % for rendering Julia code
+\usepackage{siunitx} 
 
 %% formatting
 \newtheorem{theorem}{Theorem}[section]
@@ -77,7 +78,7 @@
 
 \section{Introduction}
 
-An initiative laid out by the DOE in 2019 outlines the importance and potential of the ever growing field of SciML \cite{bakerWorkshopReportBasic2019}. In this report, they indicate the computational challenges SciML could potentially solve: lack of data in analysis, and solving differential equations. In the first case, in problems where data is either expensive or impossible to collect, implementations of machine learning become impossible. This can be overcome if we can incorporate physics knowledge of the system into the neural network. Such implementations make use of \emph{Physics-Informed Neural Networks} (PINN) \cite{karniadakisPhysicsinformedMachineLearning2021}. Moreover, PINN can additionally solve differential equations by slight modification of the lack of data problem. We can even combine these two techniques by including data into solving differential equations to better fit a model or aid in solving the equation(s). A robust implementation of many of these techniques has been underway in the \Julia programming language. Packages that make use of machine learning are part of the \texttt{SciML.jl} universe which includes a basic syntax for code and basic functions in using SciML. Further information on the evolution of the SciML universe can be found in last year's SciML Con \cite{SciMLCon2022}. 
+An initiative laid out by the DOE in 2019 outlines the importance and potential of the ever growing field of SciML \cite{bakerWorkshopReportBasic2019}. In this report, they indicate the computational challenges SciML could potentially solve: lack of data in analysis, and solving differential equations. In the first case, in problems where data is either expensive or impossible to collect, implementations of machine learning become impossible. This can be overcome if we can incorporate physics knowledge of the system into the neural network. Such implementations make use of \emph{Physics-Informed Neural Networks} (PINN) \cite{karniadakisPhysicsinformedMachineLearning2021}. Additionally, PINN can solve differential equations by slight modification of the lack of data problem. We can even combine these two techniques by including data into solving differential equations to better fit a model or aid in solving the equation(s). A robust implementation of many of these techniques has been underway in the \Julia programming language. Packages that make use of machine learning are part of the \texttt{SciML.jl} universe which includes a basic syntax for code and basic functions in using SciML. Further information on the evolution of the SciML universe can be found in last year's SciML Con \cite{SciMLCon2022}. 
 
 Because of the rapidly growing nature of the field of SciML, documentation on how the techniques are used and the new tools available are not easy to access. This paper seeks to fill in some of the gaps, describing succinctly how SciML can be used to solve differential equations. In particular, we put the newly-released package \texttt{NeuralPDE.jl} to the test to solve several complex differential equations and compare the computational solutions to known analytical solutions. In section two, we will outline the basics of what machine learning is. In sections three and four we will describe how to solve ODEs and PDEs with Physics-Informed Neural Networks (PINN). Finally, in section five we present a more complex problem: solving Einstein's field equations to obtain the Schwarzschild Metric using PINN. 
 
@@ -156,6 +157,8 @@ Let $x \in \Omega$, let $u(x)$ be a regular function, and $\net(x,w)$ be a neura
 There is, however, one big caveat to this theorem: nothing about the problem tells us how big our network should be in order to fulfill the theorem. In some cases, the size of the network may be computationally infeasible to model. Nonetheless, it is this theorem which allows us to be able to have some hope that differential equations can be arbitrarily approximated by neural networks. 
 
 In the rest of the paper, we take these theoretical concepts and apply them to the problem of solving differential equations, starting with ODEs and then moving to PDEs. 
+
+\subsection{Differential Programming}
 
 %% ---------------------------------------------------------------
 %% SECTION: SOLVING ODES WITH PINN
@@ -318,8 +321,8 @@ Consider the homogeneous system of linear PDEs given by
 
 \begin{equation}
 \begin{split}
-	\partial_t u + \partial_x v + (v + u) & = 0 \\
-	\partial_x u + \partial_t v + (v + u) & = 0
+	\partial_t u - \partial_x v + (v + u) & = 0 \\
+	\partial_t v - \partial_t u + (v + u) & = 0
 \end{split}
 \end{equation}
 subject to the initial conditions 
@@ -528,41 +531,109 @@ To see the complete implementation of the above, see the data availability state
 
 \section{Solving Einstein's Field Equations to obtain the Schwarzschild Metric using \texttt{NeuralPDE.jl}}
 
-We find a numerical solution to Einstein's field equations under a few assumptions to yield the Schwarzschild Metric as first described by Schwarzschild in 1916 \cite{schwarzschildGravitationalFieldMass1999}. 
+We find a numerical solution to Einstein's field equations resulting in the Schwarzschild Metric as first described by Schwarzschild in 1916 \cite{schwarzschildGravitationalFieldMass1999} by using PINN techniques and mathematical simplifications. This problem has the benefit that it both tests the limits of what neural networks can do while still having a nice analytical solution. 
 
 \subsection{Physics Background and Problem Set-up}
 
-Einsteins field equations are given by 
+Solutions to the Einstein field equations seek to describe space-time, mathematically encapsulated in the space-time metric tensor $g_{\mu\nu}$. We will consider the problem of a massive black hole which is 1) uncharged and 2) non-rotating following the detailed solution given in \cite{eigenchrisRelativity108aSchwarzschild}. To find $g_{\mu\nu}$, consider Einstein's field equations given by 
 
 \begin{equation}
-    R_{\mu\nu} - \frac{1}{2}R g_{\mu\nu} + \Lambda g_{\mu\nu} = \frac{8 \pi G}{c^4}T_{\mu\nu}
+    R_{\mu\nu} - \frac{1}{2}R g_{\mu\nu} + \Lambda g_{\mu\nu} = \frac{8 \pi G}{c^4}T_{\mu\nu}.
     \label{eqn:EFE}
-\end{equation}. 
-
-Under our assumptions (Define) this reduces to 
-
-\begin{equation}
-    R_{\mu\nu} = 0. 
 \end{equation}
-
-We define connecting coefficients as 
+We will consider space-time outside the black hole which we assume to be empty. Thus, $T_{\mu\nu} = 0$. We additionally will not consider cosmological scales so we just set $\Lambda = 0$. Using some algebra, we then find that
 
 \begin{equation}
-    \Gamma^{\alpha}_{\mu\nu} = -\frac{1}{2}\sum_{\beta}g^{\alpha\beta}\left(\frac{\partial g_{\mu\beta}}{\partial x_{\nu}} + \frac{\partial g_{\nu\beta}}{\partial x_{\mu}} - \frac{\partial g_{\mu\nu}}{\partial x_{\beta}}\right)
+\begin{split}
+    R_{\mu\nu} - \frac{1}{2}Rg_{\mu\nu} & = 0 \\
+    R_{\mu\nu}g^{\mu\nu} - \frac{1}{2}Rg_{mu\nu}g^{\mu\nu} & = 0 \\
+    R - 2R & = 0 \\ 
+    R_{\mu\nu} & = 0 \implies \boxed{R_{\mu\nu} = 0}. 
+\end{split}
+\end{equation}
+Define the Cristoffel symbols as
+
+\begin{equation}
+    \Gamma^{\alpha}_{\mu\nu} := -\frac{1}{2}\sum_{\beta}g^{\alpha\beta}\left(\frac{\partial g_{\mu\beta}}{\partial x_{\nu}} + \frac{\partial g_{\nu\beta}}{\partial x_{\mu}} - \frac{\partial g_{\mu\nu}}{\partial x_{\beta}}\right).
     \label{eqn:ccs}
 \end{equation}
-The solutions outlined in Swarzschild's paper yields the following differential equations to solve
+Subsequently, we define the Ricci tensor as:
 
 \begin{equation}
-    \sum_{\alpha} \frac{\partial \Gamma^{\alpha}_{\mu\nu}}{\partial x_{\alpha}} + \sum_{\alpha\beta} \Gamma^{\alpha}_{\mu\beta} \Gamma^{\beta}_{\mu\alpha} = 0
+    R_{\mu\nu} := \sum_{\alpha} \frac{\partial \Gamma^{\alpha}_{\mu\nu}}{\partial x_{\alpha}} - \sum_{\alpha} \frac{\partial \Gamma^{\alpha}_{\alpha\mu}}{\partial x_{\nu}} + \sum_{\alpha\beta} \left(\Gamma^{\alpha}_{\alpha\beta} \Gamma^{\beta}_{\mu\nu} - \Gamma^{\alpha}_{\mu\beta} \Gamma^{\beta}_{\alpha\nu}\right)
+    \label{eqn:ricci}
 \end{equation}
-where we also require 
+Finally, define the metric tensor as 
 
 \begin{equation}
-    |g_{\mu\nu}| = -1. 
+    g_{\mu\nu} = \begin{pmatrix}
+        g_{00} & g_{01} & g_{02} & g_{03} \\
+        g_{10} & g_{11} & g_{12} & g_{13} \\
+        g_{20} & g_{21} & g_{22} & g_{23} \\
+        g_{30} & g_{31} & g_{32} & g_{33}
+    \end{pmatrix}
+\end{equation}
+where we use the space-time indices $(0,1,2,3)$ corresponding to the variables $(ct, \rho, \theta, \phi)$ in spherical coordinates. 
+
+In order to solve we need to make a few further assumptions:
+
+\begin{enumerate}
+    \item As $r \rightarrow \infty$, $g_{\mu\nu} \rightarrow \eta_{\mu\nu}$ where $\eta_{\mu\nu}$ is the minkowski metric in sphereical coordinates. 
+    \item Space-time is static meaning that a) $\partial_t g_{\mu\nu} = 0$ and b) $t \rightarrow -t$ leaves $g_{\mu\nu}$ unchanged. This ensures the black hole is non-rotating. 
+    \item Space-time is spherically symmetric. 
+\end{enumerate}
+Applying these assumptions to the metric yields 
+
+\begin{equation}
+    g_{\mu\nu} = \begin{pmatrix}
+        A(r) & 0 & 0 & 0 \\
+        0 & -B(r) & 0 & 0 \\
+        0 & 0 & r^2 & 0 \\
+        0 & 0 & 0 & r^2\sin^2\theta
+    \end{pmatrix}.
+    \label{eqn:g_simple}
+\end{equation}
+Finally, in order to find a unique solution, we need to ensure the metric matches Newtonian gravity in the limits of 1) weak gravity and 2) low velocity. This essentially means we need the Geodesic Equation, given by 
+
+\begin{equation}
+    \frac{d^2 x^{\sigma}}{d\lambda^2} + \Gamma^{\sigma}_{\mu\nu} \frac{dx^{\mu}}{d\lambda}\frac{dx^{\nu}}{d\lambda} = 0,
+    \label{eqn:geo}
+\end{equation}
+to match Newtonian gravity, given by 
+
+\begin{equation}
+    \frac{d^2x^i}{dt^2} + \frac{\partial\varphi}{\partial x^i} = 0
+    \label{eqn:newton}
+\end{equation}
+where $\varphi = GM/r$ is the gravitational potential. 
+
+\begin{enumerate}
+\item In the limit of low velocity, $t \approx \tau = ct$, and a particle's four-velocity is dominated by the time component so that $\textbf{U} = (c,0,0,0)$. This reduces Eqn. \ref{eqn:geo} to 
+
+\begin{equation}
+     \frac{d^2x^i}{dt^2} + \Gamma^i_{00}c^2 = 0
+     \label{eqn:geo_low_v}
+\end{equation}
+which implies that 
+
+\begin{equation}
+    \Gamma^i_{00} = \frac{\partial \varphi}{\partial x^i}\frac{1}{c^2}. 
 \end{equation}
 
-A full solution to this problem yielding the analytic solution in spherical coordinates
+\item In the limit of weak gravity we write $g_{\mu\nu} \approx \eta_{\mu\nu} + h_{\mu\nu}$ where $||h_{\mu\nu}|| \ll 1$. Then, we can write 
+
+\begin{equation}
+    \Gamma^i_{00} = \frac{1}{2}\eta^{ii}(\partial_0 h_{i0} + \partial_0h_{i0} - \partial_i h_{00})
+\end{equation}
+as derivatives of the constant matrix $\eta$ in Cartesian coordinates are zero. Because all off-diagonal elements of our matrix are zero, this reduces to 
+
+\begin{equation}
+    \Gamma^i_{00} = -\frac{1}{2}\eta^{ii}\partial_i h_{00}
+\end{equation}
+
+\end{enumerate}
+
+Applying all the above conditions, we find that the metric is given by
 
 \begin{equation}
     g_{\mu\nu} = \begin{pmatrix}
@@ -575,11 +646,59 @@ A full solution to this problem yielding the analytic solution in spherical coor
 where 
 
 \begin{equation}
-    r_s = \frac{2GM}{c^2},
+    r_s = \frac{2GM}{c^2}
 \end{equation}
-is given in \cite{eigenchrisRelativity108aSchwarzschild}. 
+is the Schwarzschild radius or the event horizon of the black hole. 
 
 \subsection{Technical Implementation}
+
+While this system has a nice, simple analytical solution, finding a numerical solution is not trivial. In particular, starting with Eqn. \ref{eqn:ricci} and then applying the assumptions outlined above as initial conditions yields a PDE problem too big to feasibly solve. For this reason, we will use the simplified form of $g_{\mu\nu}$ given in Eqn. \ref{eqn:g_simple} for our implementation. While this yields a system of highly coupled ODEs, employing initial conditions such that a solutions is reached is still not trivial. The implementation provided also demonstrates how the problem may be expanded to more dimensions at the cost of significantly longer training times. 
+
+The system of equations we ultimately solve can be found by plugging the form of Eqn. \ref{eqn:g_simple} into Eqn. \ref{eqn:ricci}. This results in the system given by 
+
+\begin{equation}
+\begin{split}
+    4A'B^2 - 2rB''AB + 2A'B'B + rB'^2A & = 0 \\
+    rA'B + 2A^2B - 2AB - rB'A & = 0 \\ 
+    -2rB''AB + rA'B'B + rB'^2A - 4B'AB & = 0
+\end{split}
+\end{equation}
+where the prime indicates a derivative of $r$ such that $A' = dA(r)/dr$. In order to fulfill the condition $r \rightarrow \infty$, $g_{\mu\nu} \rightarrow \eta_{\mu\nu}$, we impose the boundary conditions $A(r_{max}) = 1, B(r_{max}) = 1$. We solve this problem over the interval $r = [r_{min}, r_{max}]$ where we choose $r_{min}$ such that $r_{min} > r_s$ to avoid the singularity at the black-hole's event horizon, and $r_{max}$ is big enough such the boundary condition is a reasonable approximation when applied to the analytic solution. Recall that the analytical solution is given by 
+
+\begin{equation}
+\begin{split}
+    A(r) & = 1 - \frac{r_s}{r} \\ 
+    B(r) & = -\left(1 - \frac{r_s}{r}\right)^{-1}
+\end{split}
+\end{equation}
+where $r_s$ is the Schwarzschild radius. For this problem, we will consider space-time around a solar-mass black hole and will use astronomical units for length and years for time. Thus, $GM = 4\pi^2\si{AU^{3}/year^2}$ by Kepler's third law and $c = 6.3 \times 10^4 \si{AU/year}$ so that $r_s = 1.97 \times 10^{-8} \si{AU}$. 
+
+Our problem in almost completely defined, however, we still need to find a way to match Newtonian gravity in the limit of low velocity and weak gravity. In order to do this, we put a test particle into the space-time predicted by our network and let this particle move according to Eqn. \ref{eqn:geo_low_v}. We then drop this same particle into a Newtonian space-time and let it move according to Eqn. \ref{eqn:newton}. We can then compare the predictions of both and add this prediction to the loss function for training a solution. This is done simply by using the euclidean distance metric and squaring such that the closer the two points are to each other in space, the smaller the loss is. 
+
+Unfortunately, implementing this is not a trivial task. Notice that in order for the network to learn or perform backpropogation, solving of the ODE given in Eqn. \ref{eqn:geo_low_v} must be done \emph{inside the loss function}. This requires that we are able to take the derivative of an ODE solver: a clear application of differentiable programming. Luckily, \Julia has an excellent infrastructure for this. 
+
+In order to implement this as a term in the loss function, we first have to solve for the path of a particle given Newtonian gravity. This can be done easily with \texttt{DifferentialEquations.jl}. Then, we can add a tern to the loss function to solve the differential equation given in Eqn. \ref{eqn:geo_low_v} with the same initial conditions and compare. This is done in the following code:
+
+\begin{jllisting}
+function additional_loss(phi, θ, p)
+
+    # 00 component of metric from neural network
+    g00(x,y) = phi[1](sqrt(x^2+y^2), θ.depvar[:A])[1]
+
+    # set-up the problem using current 
+    function simple_geodesic(ddu,du,u,p,t)
+        ddu[1] = -(c^2)/2 * ((g00(u[1]+ϵ,u[2]) - g00(u[1],u[2]))/ϵ)
+        ddu[2] = -(c^2)/2 * ((g00(u[1],u[2]+ϵ) - g00(u[1],u[2]))/ϵ)
+    end
+
+    # solve system of diff-eqs 
+    prob = SecondOrderODEProblem(simple_geodesic, dx0, x0, tspan)
+    sol = solve(prob, Rosenbrock23(), reltol=0.01, abstol=0.01, saveat=dx)
+
+    return sum(distance2(sol_nts[i][1],sol[i][3],
+        sol_nts[i][2],sol[i][4]) for i in eachindex(sol_nts))
+end
+\end{jllisting}
 
 \subsection{Results and Discussion}
 
@@ -608,7 +727,18 @@ I am very grateful for the mentorship of Alex Heaton and Megan Pickett in workin
 
 \end{document}
 
-%% EXTRA EXAMPLE
+% The solutions outlined in Swarzschild's paper yields the following differential equations to solve
+
+% \begin{equation}
+%     \sum_{\alpha} \frac{\partial \Gamma^{\alpha}_{\mu\nu}}{\partial x_{\alpha}} + \sum_{\alpha\beta} \Gamma^{\alpha}_{\mu\beta} \Gamma^{\beta}_{\mu\alpha} = 0
+% \end{equation}
+% where we also require 
+
+% \begin{equation}
+%     |g_{\mu\nu}| = -1. 
+% \end{equation}
+
+% %% EXTRA EXAMPLE
 
 % \begin{example}
 
