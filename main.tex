@@ -652,7 +652,7 @@ is the Schwarzschild radius or the event horizon of the black hole.
 
 \subsection{Technical Implementation}
 
-While this system has a nice, simple analytical solution, finding a numerical solution is not trivial. In particular, starting with Eqn. \ref{eqn:ricci} and then applying the assumptions outlined above as initial conditions yields a PDE problem too big to feasibly solve. For this reason, we will use the simplified form of $g_{\mu\nu}$ given in Eqn. \ref{eqn:g_simple} for our implementation. While this yields a system of highly coupled ODEs, employing initial conditions such that a solutions is reached is still not trivial. The implementation provided also demonstrates how the problem may be expanded to more dimensions at the cost of significantly longer training times as we use \texttt{NeuralPDE.jl} to solve. 
+While this system has a nice, simple analytical solution, finding a numerical solution is not trivial. In particular, starting with Eqn. \ref{eqn:ricci} and then applying the assumptions outlined above as initial conditions yields a PDE problem too big to feasibly solve given the time constrains of this capstone. For this reason, we will use the simplified form of $g_{\mu\nu}$ given in Eqn. \ref{eqn:g_simple} for our implementation. While this yields a system of highly coupled ODEs, employing initial conditions such that a solutions is reached is still not trivial. The implementation provided also demonstrates how the problem may be expanded to more dimensions at the cost of significantly longer training times as we use \texttt{NeuralPDE.jl} to solve. Additionally, architecture for expanding to more complex systems is included in the implementation for potential future use. 
 
 The system of equations we ultimately solve can be found by plugging the form of Eqn. \ref{eqn:g_simple} into Eqn. \ref{eqn:ricci}. This results in the system given by 
 
@@ -661,6 +661,7 @@ The system of equations we ultimately solve can be found by plugging the form of
     4A'B^2 - 2rB''AB + 2A'B'B + rB'^2A & = 0 \\
     rA'B + 2A^2B - 2AB - rB'A & = 0 \\ 
     -2rB''AB + rA'B'B + rB'^2A - 4B'AB & = 0
+    \label{eqn:einstein_ODEs}
 \end{split}
 \end{equation}
 where the prime indicates a derivative of $r$ such that $A' = dA(r)/dr$. In order to fulfill the condition $r \rightarrow \infty$, $g_{\mu\nu} \rightarrow \eta_{\mu\nu}$, we impose the boundary conditions $A(r_{max}) = 1, B(r_{max}) = 1$. We solve this problem over the interval $r = [r_{min}, r_{max}]$ where we choose $r_{min}$ such that $r_{min} > r_s$ to avoid the singularity at the black-hole's event horizon, and $r_{max}$ is big enough such the boundary condition is a reasonable approximation when applied to the analytic solution. Recall that the analytical solution is given by 
@@ -673,13 +674,15 @@ where the prime indicates a derivative of $r$ such that $A' = dA(r)/dr$. In orde
 \end{equation}
 where $r_s$ is the Schwarzschild radius. 
 
-For this problem, we will consider space-time around a black hole with a weight $10^5$ times that of the sun and will use astronomical units for length and years for time. Thus, $GM = 3.94{AU^{3}/year^2}$ and $c = 6.3 \times 10^4 \si{AU/year}$ so that $r_s = 1.2 \times 10^{-4} \si{AU}$. 
+For this problem, we will consider space-time around a black hole with a weight $10^5$ times that of the sun and will use astronomical units for length and years for time. Thus, $GM = 3.94\si{AU^{3}/year^2}$ and $c = 6.3 \times 10^4 \si{AU/year}$ so that $r_s = 1.2 \times 10^{-4} \si{AU}$. 
 
 Our problem in almost completely defined, however, we still need to find a way to match Newtonian gravity in the limit of low velocity and weak gravity. In order to do this, we put a test particle into the space-time predicted by our network and let this particle move according to Eqn. \ref{eqn:geo_low_v}. We then drop this same particle into a Newtonian space-time and let it move according to Eqn. \ref{eqn:newton}. We can then compare the predictions of both and add this prediction to the loss function for training a solution. This is done simply by using the euclidean distance metric and squaring such that the closer the two points are to each other in space, the smaller the loss is. 
 
 Unfortunately, implementing this is not a trivial task. Notice that in order for the network to learn or perform backpropogation, the ODE given in Eqn. \ref{eqn:geo_low_v} must must be solved \emph{inside the loss function}. Moreover, in order to move towards a better solution, we must be able to take the derivative of an ODE solver: a clear application of differentiable programming. Moreover, solutions to the simple Newtonian version can quickly blow-up or require advanced solving techniques for slight changes in initial parameters of the problem. This makes solving within the loss function potentially very unstable. 
 
 In order to partially overcome an unstable loss, we pick a solution to the Newtonian problem which slowly moves away from a stable orbit. In addition, we solve only in the $x-y$ plane so as to eliminate as much computational pressure as possible. By placing our particle on the $x$-axis with velocity completely in the $y$-direction, namely we place it at $(40 \si{AU}, 0 \si{AU})$ with velocity $(0 \si{AU/yr}, 500 \si{AU/yr})$ we accomplish these conditions. Solving over the time interval $t = (0, 0.1)$ with \texttt{DifferentialEquations.jl} yields the solution shown in Fig. \ref{fig:newton_sol}. 
+
+Now that we have the system setup, we can attempt to solve the problem in Eqn. \ref{eqn:einstein_ODEs}. We use a network with two hidden layers both with the sigmoid activation function. Each hidden layer contains ten nodes each. Weights in the network are initialized uniformly according to the Glorot paper \cite{glorotUnderstandingDifficultyTraining2010}. Training is done with the BFGS and limited memory BFGS algorithm \cite{liuLimitedMemoryBFGS1989} over fifteen epochs. 
 
 \begin{figure}
     \centering
