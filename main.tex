@@ -158,7 +158,7 @@ There is, however, one big caveat to this theorem: nothing about the problem tel
 
 In the rest of the paper, we take these theoretical concepts and apply them to the problem of solving differential equations, starting with ODEs and then moving to PDEs. 
 
-\subsection{Differential Programming}
+%\subsection{Differential Programming}
 
 %% ---------------------------------------------------------------
 %% SECTION: SOLVING ODES WITH PINN
@@ -255,7 +255,7 @@ Flux.train!(loss, Flux.params(NNODE), data, opt; cb=cb)
 We can then see how our network does in comparison to the true solution as shown in the below plot:
 
 \begin{center}
-\includegraphics[width=0.45\linewidth]{figures/ODE_example.png}
+\includegraphics[width=0.42\linewidth]{figures/ODE_example.png}
 \end{center}
 and we see that our network does pretty well! We could, of course, improve performance by training longer or playing with the size of the network or learning rate, however the above remains a good example of how to utilize neural networks to solve ODEs as is. 
 
@@ -406,7 +406,7 @@ The loss is displayed in Fig. \ref{fig:loss_linear} and the results of the above
 
 \begin{figure}
 \centering
-	\includegraphics[width=0.4\linewidth]{figures/linear_homo_PDE_plots/loss.png}
+	\includegraphics[width=0.3\linewidth]{figures/linear_homo_PDE_plots/loss.png}
 	\caption{Value of loss as a function of epoch for the linear system of homogenous PDEs. Three stages of learning are represented with the learning rate labeled. While there are some instabilities in the loss, we ultimately find a nice solution with the final learning rate of $10^{-7}$}
 	\label{fig:loss_linear}
 \end{figure}
@@ -510,7 +510,7 @@ For optimization we use the ADAM optimizer and vary the learning rate starting w
 
 \begin{figure}
 \centering
-    \includegraphics[width=0.4\linewidth]{figures/integral_PDE_plots/loss.png}
+    \includegraphics[width=0.3\linewidth]{figures/integral_PDE_plots/loss.png}
     \caption{Loss as a function of epoch in training a neural network to learn the solution of the integral PDE presented above. Learning is broken up into three sections with differing learning rate as shown}
     \label{fig:loss_integro}
 \end{figure}
@@ -578,11 +578,11 @@ where we use the space-time indices $(0,1,2,3)$ corresponding to the variables $
 In order to solve we need to make a few further assumptions:
 
 \begin{enumerate}
-    \item As $r \rightarrow \infty$, $g_{\mu\nu} \rightarrow \eta_{\mu\nu}$ where $\eta_{\mu\nu}$ is the minkowski metric in sphereical coordinates. 
+    \item As $r \rightarrow \infty$, $g_{\mu\nu} \rightarrow \eta_{\mu\nu}$ where $\eta_{\mu\nu}$ is the minkowski metric in spherical coordinates. 
     \item Space-time is static meaning that a) $\partial_t g_{\mu\nu} = 0$ and b) $t \rightarrow -t$ leaves $g_{\mu\nu}$ unchanged. This ensures the black hole is non-rotating. 
     \item Space-time is spherically symmetric. 
 \end{enumerate}
-Applying these assumptions to the metric yields 
+Applying these assumptions to the metric causes almost all components to vanish, and reduces the unknowns to $A(r)$ and $B(r)$, two functions of a single variable $r$. The metric tensor now reads 
 
 \begin{equation}
     g_{\mu\nu} = \begin{pmatrix}
@@ -652,7 +652,7 @@ is the Schwarzschild radius or the event horizon of the black hole.
 
 \subsection{Technical Implementation}
 
-While this system has a nice, simple analytical solution, finding a numerical solution is not trivial. In particular, starting with Eqn. \ref{eqn:ricci} and then applying the assumptions outlined above as initial conditions yields a PDE problem too big to feasibly solve given the time constrains of this capstone. For this reason, we will use the simplified form of $g_{\mu\nu}$ given in Eqn. \ref{eqn:g_simple} for our implementation. While this yields a system of highly coupled ODEs, employing initial conditions such that a solutions is reached is still not trivial. The implementation provided also demonstrates how the problem may be expanded to more dimensions at the cost of significantly longer training times as we use \texttt{NeuralPDE.jl} to solve. Additionally, architecture for expanding to more complex systems is included in the implementation for potential future use. 
+While this system has a nice, simple analytical solution, finding a numerical solution is not trivial. In particular, starting with Eqn. \ref{eqn:ricci} and then applying the assumptions outlined above as initial conditions yields a PDE problem too big to feasibly solve given the time constrains of this capstone. For this reason, we will use the simplified form of $g_{\mu\nu}$ given in Eqn. \ref{eqn:g_simple} for our implementation. While this yields a system of highly coupled ODEs, employing initial conditions such that a solution is reached is still not trivial. The implementation provided also demonstrates how the problem may be expanded to more dimensions at the cost of significantly longer training times as we use \texttt{NeuralPDE.jl} to solve. Additionally, architecture for expanding to more complex systems is included in the implementation for potential future use. 
 
 The system of equations we ultimately solve can be found by plugging the form of Eqn. \ref{eqn:g_simple} into Eqn. \ref{eqn:ricci}. This results in the system given by 
 
@@ -676,28 +676,62 @@ where $r_s$ is the Schwarzschild radius.
 
 For this problem, we will consider space-time around a black hole with a weight $10^5$ times that of the sun and will use astronomical units for length and years for time. Thus, $GM = 3.94\si{AU^{3}/year^2}$ and $c = 6.3 \times 10^4 \si{AU/year}$ so that $r_s = 1.2 \times 10^{-4} \si{AU}$. 
 
-Our problem in almost completely defined, however, we still need to find a way to match Newtonian gravity in the limit of low velocity and weak gravity. In order to do this, we put a test particle into the space-time predicted by our network and let this particle move according to Eqn. \ref{eqn:geo_low_v}. We then drop this same particle into a Newtonian space-time and let it move according to Eqn. \ref{eqn:newton}. We can then compare the predictions of both and add this prediction to the loss function for training a solution. This is done simply by using the euclidean distance metric and squaring such that the closer the two points are to each other in space, the smaller the loss is. 
+We still need to find a way to match Newtonian gravity in the limit of low velocity and weak gravity. In order to do this, we put a test particle into the space-time predicted by our network and let this particle move according to the geodesic equation, Eqn. \ref{eqn:geo_low_v}. We then drop this same particle into a Newtonian space-time and let it move according to Newton's laws, Eqn. \ref{eqn:newton}. We can then compare both solution paths and add a measure of their difference to the loss function for training a better solution. To measure the difference between the two paths we sample both paths at ?? points, and sum the squares of the Euclidean distances between corresponding points.
 
-Unfortunately, implementing this is not a trivial task. Notice that in order for the network to learn or perform backpropogation, the ODE given in Eqn. \ref{eqn:geo_low_v} must must be solved \emph{inside the loss function}. Moreover, in order to move towards a better solution, we must be able to take the derivative of an ODE solver: a clear application of differentiable programming. Moreover, solutions to the simple Newtonian version can quickly blow-up or require advanced solving techniques for slight changes in initial parameters of the problem. This makes solving within the loss function potentially very unstable. 
+Unfortunately, implementing this is not a trivial task. Notice that in order for the network to learn or perform backpropogation, the ODE given in Eqn. \ref{eqn:geo_low_v} must be solved \emph{inside the loss function}. Moreover, in order to move towards a better solution, we must be able to take the derivative of an ODE solver: a clear application for the recent paradigm called differentiable programming \cite{innesDifferentiableProgrammingSystem2019,baydinAutomaticDifferentiationMachine2018}. Moreover, solutions to the simple Newtonian version can quickly blow-up or require advanced solving techniques for slight changes in initial parameters of the problem. This makes solving within the loss function potentially very unstable. 
 
-In order to partially overcome an unstable loss, we pick a solution to the Newtonian problem which slowly moves away from a stable orbit. In addition, we solve only in the $x-y$ plane so as to eliminate as much computational pressure as possible. By placing our particle on the $x$-axis with velocity completely in the $y$-direction, namely we place it at $(40 \si{AU}, 0 \si{AU})$ with velocity $(0 \si{AU/yr}, 500 \si{AU/yr})$ we accomplish these conditions. Solving over the time interval $t = (0, 0.1)$ with \texttt{DifferentialEquations.jl} yields the solution shown in Fig. \ref{fig:newton_sol}. 
-
-Now that we have the system setup, we can attempt to solve the problem in Eqn. \ref{eqn:einstein_ODEs}. We use a network with two hidden layers both with the sigmoid activation function. Each hidden layer contains ten nodes each. Weights in the network are initialized uniformly according to the Glorot paper \cite{glorotUnderstandingDifficultyTraining2010}. Training is done with the BFGS and limited memory BFGS algorithm \cite{liuLimitedMemoryBFGS1989} over fifteen epochs. 
+In order to partially overcome an unstable loss, we pick a solution to the Newtonian problem which slowly moves away from a stable orbit. In addition, we solve only in the $xy$-plane so as to eliminate as much computational pressure as possible. By placing our particle on the $x$-axis with velocity completely in the $y$-direction, namely we place it at $(15 \si{AU}, 0 \si{AU})$ with velocity $(0 \si{AU/yr}, 100 \si{AU/yr})$ we accomplish these conditions. Solving over the time interval $t = (0, 0.03)$ with \texttt{DifferentialEquations.jl} yields the solution shown in Fig. \ref{fig:newton_sol}. 
 
 \begin{figure}
     \centering
     \includegraphics[width=0.3\linewidth]{figures/newton_solution.png}
-    \caption{Caption}
+    \includegraphics[width=0.3\linewidth]{figures/newton_solution_complete.png}
+    \caption{ODE solution using Newtonian prediction for particle motion. Initial conditions are $(15 \si{AU}, 0 \si{AU})$ with velocity $(0 \si{AU/yr}, 100 \si{AU/yr})$. On the left panel, the problem is solved over the time interval $t = (0, 0.03)$ with a step-size of $0.0025$ while the right panel shows a more complete solution of the interval $t = (0.0, 1.0)$}
     \label{fig:newton_sol}
 \end{figure}
 
 \subsection{Results and Discussion}
+
+Now that we have the system setup, we can attempt to solve for the remaining component of the metric tensor $g$, namely for the functions $A(r)$ and $B(r)$ as described in the system of ODEs we derived above in Eqn. \ref{eqn:einstein_ODEs}. We use a network with two hidden layers both with the sigmoid activation function. Each hidden layer contains ten nodes each. Weights in the network are initialized uniformly according to the Glorot paper \cite{glorotUnderstandingDifficultyTraining2010}. Training is done with the BFGS and limited memory BFGS algorithm \cite{liuLimitedMemoryBFGS1989} over fifteen epochs. One solution obtained through these methods is shown in Fig. \ref{fig:best} while Fig. \ref{fig:before} shows a solution where matching Newtonian gravity was \emph{not} employed. Notice that quantitatively there is no real difference between these solutions, however qualitatively, after applying the condition to match Newtonian gravity, our solution better matches the shape of the true solution. 
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.3\linewidth]{figures/plots_before/loss.png}
+    \includegraphics[width=0.3\linewidth]{figures/plots_before/A.png}
+    \includegraphics[width=0.3\linewidth]{figures/plots_before/B.png}
+    \caption{Solution of simplified ODEs in Eqn. \ref{eqn:einstein_ODEs}. Solutions is \emph{not} forced to match Newtonian gravity. The left panel shows the loss over the training internal, while the right two panels show the solutions $A(r)$ and $B(r)$.}
+    \label{fig:before}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.3\linewidth]{figures/current_best/loss.png}
+    \includegraphics[width=0.3\linewidth]{figures/current_best/A.png}
+    \includegraphics[width=0.3\linewidth]{figures/current_best/B.png}
+    \caption{Solution of simplified ODEs in Eqn. \ref{eqn:einstein_ODEs}. Solutions \emph{is} forced to match Newtonian gravity. The left panel shows the loss over the training internal, while the right two panels show the solutions $A(r)$ and $B(r)$.}
+    \label{fig:best}
+\end{figure}
+
+One of the greatest challenges in solving this problem is managing physical memory of the system. When adding an additional loss term to the solving scheme, each operation added by the user takes certain amount of memory. In particular, when performing back-propagation over a differential equation solver in addition to attempting to solve a large system of ODEs results in huge memory allocation. If too much memory is required in order to solve, the system crashes and a segmentation fault is reported. In order to try to solve this problem, we do all calculations with 32-bit floats rather than the standard 64-bit. Additionally, we cannot ask the ODE solver in the additional loss function to solve for many points: around 15 points seems to be the limit. In this solving, all attempts to automatically interpolate must be turned off so as not to waste memory. 
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.3\linewidth]{figures/compare_to_newton.png}
+    \caption{Illustration of how well our solution matches Newtonian gravity \emph{after} training. The label Newton refers to the ODE solution obtained before training which we are trying to match while NN refers to the neral network solution after training}
+    \label{fig:compare_newton}
+\end{figure}
+
+Notice that trying to match Newtonian gravity with only $\sim$15 points may not work super well. Additionally, our choice of Newton solution highly influences how we match. Because we are limited in the number of points we can choose, we cannot pick an orbit which goes completely around the black hole as this would be too discontinuous. Thus, after training the typical comparison we get to Newtonian gravity is not a great match as shown in Fig. \ref{fig:compare_newton}. This could be solved by adding more points to the solutions of additional loss; however, as mentioned previously, this results in a segmentation fault. 
 
 %% ---------------------------------------------------------------
 %% SECTION: CONCLUSION
 %% ---------------------------------------------------------------
 
 \section{Conclusion}
+
+Physics-informed neural networks are a versatile and accurate method in solving systems of partial differential equations. In particular, the new implementation in \Julia, \texttt{NeuralPDE.jl}, provides a symbolic interface to easily implement many different PDE structures such as integral-PDEs, systems of PDEs, and this method has the additional ability to add extra information to solving PDEs via addition of an additional loss term. Moreover, very complex objects such as an ODE solver, can be put directly into the loss function in order to implement a boundary condition, or include extra information in solving. 
+
+Our implementation in solving Einstein's field equations to obtain the Schwarzschild metric shows how addition of a complex additional loss term can work at the cost of huge memory use, often resulting in segmentation fault. This error may be fixed in future versions of \texttt{NeuralPDE.jl}. Because this package is so new, differential programming functionality has not been extensively studied. To our knowledge, this is the only attempt which requires use of differential programming. 
 
 %% ---------------------------------------------------------------
 %% BACKBATTER, MISC. 
@@ -709,7 +743,7 @@ Now that we have the system setup, we can attempt to solve the problem in Eqn. \
 
 I am very grateful for the mentorship of Alex Heaton and Megan Pickett in working on this project. Additionally, none of this would have been possible without the education I have received at Lawrence University. I would like to thank the Physics and Mathematics department for their support and all of the opportunities I have had through both departments. 
 
-\paragraph{Data Availability Statement} All code presented above can be found in my Github, \hyperlink{https://github.com/lvb5/solve\_PDEs\_with\_PINN}{github.com/lvb5}. 
+\paragraph{Data Availability Statement} All code presented above can be found in my Github, \href{https://github.com/lvb5/solve\_PDEs\_with\_PINN}{github.com/lvb5}. Find examples in the \texttt{src} folder. All code for solving the Einstein field equations is in \texttt{src/solve\_einstein}.  
 
 \bibliography{references}
 \bibliographystyle{ieeetr}
