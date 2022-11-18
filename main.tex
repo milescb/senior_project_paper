@@ -63,7 +63,7 @@
 
 %\address[2]{\orgdiv{Division}, \orgname{Organization}, \orgaddress{\city{City}, \postcode{Pincode}, \state{State},  \country{Country}}. \email{name2@email.com}}
 
-\abstract{Machine learning and artificial intelligence have been used with great success in data science, mathematics, and physics as well as numerous other fields to solve complex or previously impossible problems. Computationally intensive problems in physics such as data analysis using a complex model and little data, or finding numerical solutions to differential equations have traditionally been solved with classical scientific computing techniques such as Taylor-series expansions or approximations using polynomials. Recent efforts have gone into replacing these techniques with neural networks and machine learning. Neural networks have the potential to fit any complex model or differential equation solution very accurately and can solve these problems quickly. In the following paper, we describe the basic principles of the growing field of Scientific Machine Learning (SciML) as it applies to solving partial differential equations (PDEs). We will use the techniques we describe to solve several examples using the new package \texttt{NeuralPDE.jl} in the \Julia programming language. To stretch the capabilities of this method, we solve the Einstein field equations to obtain the Schwarzschild metric which requires additional loss terms and application of the new paradigm differential programming in order to meet all conditions of the problem. This example demonstrates the power a physics-informed neural network has and alludes to enormous future potential. }
+\abstract{Machine learning and artificial intelligence have been used with great success in data science, mathematics, and physics as well as numerous other fields to solve complex or previously impossible problems. Computationally intensive problems in physics such as data analysis using a complex model and little data, or finding numerical solutions to differential equations have traditionally been solved with classical scientific computing techniques such as Taylor-series expansions or approximations using polynomials. Recent efforts have gone into replacing these techniques with neural networks and machine learning. Neural networks have the potential to fit any complex model or differential equation solution very accurately and can solve these problems quickly. In the following paper, we describe the basic principles of the growing field of Scientific Machine Learning (SciML) as it applies to solving partial differential equations (PDEs). We will use the techniques we describe to solve several examples using the new package \texttt{NeuralPDE.jl} in the \Julia programming language. To stretch the capabilities of this method, we solve the Einstein field equations to obtain the Schwarzschild metric which requires additional loss terms and application of the new paradigm differential programming. This example demonstrates the power a physics-informed neural network has and alludes to enormous future potential in the field. }
 
 \keywords{SciML, Scientific Computing, ML/AI, PINN, PDEs}
 
@@ -77,7 +77,7 @@
 
 \section{Introduction}
 
-Differential equations are the language of the physical world. Newton's famous second law $F=ma$ is just one example of a differential equation which fundamental describes the world around us. Many techniques currently exist for solving ordinary differential equations (ODEs)---differential equations in one variable---and partial differential equations (PDEs)---differential equations in more than one variable---both analytical and numerically. Unfortunately, solving these problems in practice is not trivial. In particular, PDEs in most real-world problems are impossible to solve analytically and are very computationally expensive to solve numerically. Enter scientific machine learning (SciML): an interdisciplinary field combining techniques from machine learning and artificial intelligence with scientific computing. SciML has the potential to provide a semi-universal interface for implementing differential equation problems and inverse problems in an efficient and accurate way. 
+Differential equations are the language of the physical world. Newton's famous second law $F=ma$ is just one example of a differential equation which fundamental describes the world around us. Many techniques currently exist for solving ordinary differential equations (ODEs)---differential equations in one variable---and partial differential equations (PDEs)---differential equations in more than one variable---both analytical \cite{evansPartialDifferentialEquations2010} and numerically \cite{davidcookStrengtheningComputationUndergraduate2007}. Unfortunately, solving these problems in practice is not trivial. In particular, PDEs in most real-world problems are impossible to solve analytically and are very computationally expensive to solve numerically. Enter scientific machine learning (SciML): an interdisciplinary field combining techniques from machine learning and artificial intelligence with scientific computing. SciML has the potential to provide a semi-universal interface for implementing differential equation problems and inverse problems in an efficient and accurate way. 
 
 An initiative laid out by the DOE in 2019 outlines the importance and potential of the ever growing field of Scientific Machine Learning \cite{bakerWorkshopReportBasic2019}. In this report, they indicate the computational challenges SciML could potentially solve: lack of data in analysis, and solving differential equations. In the first case, in problems where data is either expensive or impossible to collect, implementations of machine learning become impossible. This can be overcome if we can incorporate physics knowledge of the system into the neural network. Such implementations make use of \emph{Physics-Informed Neural Networks} (PINN) \cite{karniadakisPhysicsinformedMachineLearning2021}. Additionally, PINN can solve differential equations by slight modification of the lack of data problem. We can even combine these two techniques by including data into solving differential equations to better fit a model or aid in solving the equation(s). A robust implementation of many of these techniques has been underway in the \Julia programming language. Packages that make use of machine learning are part of the \texttt{SciML.jl} universe which includes a basic syntax for code and basic functions in using SciML. Further information on the evolution of the SciML universe can be found in last year's SciML Con \cite{SciMLCon2022}. 
 
@@ -194,72 +194,7 @@ This ensures that the initial condition is satisfied and allows us to write down
 	\loss(w) = \sum_i \left(\frac{dg(w,t_i)}{dt} - f(g(w,t_i), t_i)\right)^2. 
 \end{equation}
 
-Now that we have defined our problem, we can use standard minimization techniques to find a solution. For more information and further examples see \cite{rackauckasSciMLSciMLBookParallel}. 
-
-\subsection{Example ODE problem solved with a PINN}
-	
-Consider the equation
-
-\begin{equation}
-	u' = e^t \cos t
-\end{equation}
-with the initial condition $u(0) = 0.1$. Notice that we can find the solution to this equation via integration, i.e., the solution is given by
-
-\begin{equation}
-	u(t) = \int e^t \cos t \, dt. 
-\end{equation}
-Applying integration by parts twice, we find the solution
-
-\begin{equation}
-	u(t) = \frac{1}{2}e^t(\sin t + \cos t) + C
-\end{equation}
-where $C = -0.4$ via use of the initial condition. 
-
-Let's now solve using the techniques defined above using \Julia and the machine learning package \texttt{Flux.jl}. We begin by defining a neural network with two hidden layers one of 64 nodes the other with 32 nodes using the $\tanh$ activation function and a linear output: 
-
-\begin{jllisting}
-using Flux
-NNODE = Chain(x -> [x], # Take in a scalar and transform it into an array
-           Dense(1,64, tanh),
-           Dense(64, 32, tanh),
-           Dense(32,1),
-           first) # Take first value, i.e. return a scalar
-\end{jllisting}
-We then parametrize the solution and define the loss function in which the differentiation is computed via discretization:
-
-\begin{jllisting}
-g(t) = t*NNODE(t) + 0.1
-
-using Statistics
-ϵ = sqrt(eps(Float32))
-loss() = mean(abs2(((g(t+ϵ)-g(t))/ϵ) - (exp(t) * cos(t))) for t in 0:1f-2:5f0)
-\end{jllisting}
-Notice that we use machine $\epsilon$ here to discretize our integral as this is the smallest possible discretization before floating point error disrupts the solution. We will use gradient descent to solve with a learning rate of $10^{-4}$ over $10^4$ epochs. Because there is no data we are providing to train on, we feed the network empty data. Instead, all of the learning information comes from the loss function defined above. This is accomplished with the following code:
-
-\begin{jllisting}
-epochs = 10_000
-learning_rate = 1e-4
-
-opt = Flux.Descent(learning_rate) # use gradient Descent
-data = Iterators.repeated((), epochs) # no data here : repeat empty data
-iter = 0
-loss_history = []
-cb = function () #callback function to observe training
-  global iter += 1
-  push!(loss_history, loss())
-  if iter % 500 == 0
-    display(loss())
-  end
-end
-display(loss())
-Flux.train!(loss, Flux.params(NNODE), data, opt; cb=cb)
-\end{jllisting}
-We can then see how our network does in comparison to the true solution as shown in the below plot:
-
-\begin{center}
-\includegraphics[width=0.42\linewidth]{figures/ODE_example.png}
-\end{center}
-and we see that our network does pretty well! We could, of course, improve performance by training longer or playing with the size of the network or learning rate, however the above remains a good example of how to utilize neural networks to solve ODEs as is. 
+Now that we have defined our problem, we can use standard minimization techniques to find a solution. For a complete example see Appendix \ref{ODE_example} and for additional information and further examples see \cite{rackauckasSciMLSciMLBookParallel}. 
 
 %% ---------------------------------------------------------------
 %% SOLVING PDES WITH PINN
@@ -308,224 +243,14 @@ This method has two main disadvantages: 1) as the dimension of the problem incre
 \begin{equation}
 	\int_{\Omega} ||f(\net(x,w); \lambda)||\,dx = \alpha \sum_i ||f(x_i)||.
 \end{equation}
-for some scaler $\alpha$. As we simply want to minimize this integral, there is no need to specify $\alpha$. This problem still suffers from dimensionality exponentially increasing. Thus, we turn to a third method: quadrature training with a neural network. Several processes for specifying quadrature are described in \cite{riveraQuadratureRulesSolving2022}. These are typically of the form 
+for some scalar $\alpha$. As we simply want to minimize this integral, there is no need to specify $\alpha$. This problem still suffers from dimensionality exponentially increasing. Thus, we turn to a third method: quadrature training with a neural network. Several processes for specifying quadrature are described in \cite{riveraQuadratureRulesSolving2022}. These are typically of the form 
 
 \begin{equation}
 	\int_{\Omega} ||f(\net(x,w); \lambda)||\,dx = \sum_i \alpha_i ||f(x_i)||\,dx.
 \end{equation}
-In the implementation via \texttt{NeuralPDE.jl}, this is accomplised using the \texttt{Integrals.jl} package which calls the \Julia differential equation solver \cite{rackauckasDifferentialEquationsJlPerformant2017} to find the correct sampling points $x_i$ and weights $\alpha_i$ in an implementation of Gaussian quadrature rules. 
+In the implementation via \texttt{NeuralPDE.jl}, this is accomplished using the \texttt{Integrals.jl} package which calls the \Julia differential equation solver \cite{rackauckasDifferentialEquationsJlPerformant2017} to find the correct sampling points $x_i$ and weights $\alpha_i$ in an implementation of Gaussian quadrature rules. 
 
-\subsection{Example using \texttt{NeuralPDE.jl}}
-
-We show how \texttt{NeuralPDE.jl} can be used to solve a simple example and describe the important components of the code. 
-
-Consider the homogeneous system of linear PDEs given by
-
-\begin{equation}
-\begin{split}
-	\partial_t u - \partial_x v + (v + u) & = 0 \\
-	\partial_t v - \partial_t u + (v + u) & = 0
-\end{split}
-\end{equation}
-subject to the initial conditions 
-
-\begin{equation}
-	u(0,x) = \sinh x, \,\,\,\,\,\,\,\, v(0,x) = \cosh x. 
-\end{equation}    
-By means of the so-called Homotopy analysis method, the authors in \cite{samibatainehApproximateAnalyticalSolutions2008} find the analytical solution to this system to be given by 
-
-\begin{equation}
-	u(x,t) = \sinh(x - t), \,\,\,\,\,\,\,\, v(x,t) = \cosh(x - t). 
-\end{equation}
-
-We now solve with \texttt{NeuralPDE.jl}, describing important aspects of the code. To begin, we set up the system symbolically with the aid of \texttt{Modelingtoolkit.jl} as follows:
-
-\begin{jllisting}
-@parameters t x
-@variables u(..) v(..)
-
-Dx = Differential(x)
-Dt = Differential(t)
-
-eqns = [Dt(u(t,x)) - Dx(v(t,x)) + (u(t,x) + v(t,x)) ~ 0,
-        Dt(v(t,x)) - Dx(u(t,x)) + (u(t,x) + v(t,x)) ~ 0]
-
-bcs = [u(0,x) ~ sinh(x), v(0,x) ~ cosh(x)]
-
-domains = [x ∈ Interval(0.0, 1.0),
-            t ∈ Interval(0.0, 1.0)]
-
-@named pde_sys = PDESystem(eqns, bcs, domains, [t,x], [u(t,x), v(t,x)])
-\end{jllisting}
-For systems of equations, store each equation as an element of the vector \texttt{eqn} as with the boundary conditions, \texttt{bcs}. We now define a neural network to solve the problem using the machine learning library \texttt{Lux.jl}. Our network has one hidden layer with 30 nodes, and takes two input variables---one for each parameter of the problem. We output a single number. Notice that each variable $u,v$ of our problem gets its own network. This is implemented simply as
-
-\begin{jllisting}
-dim = length(domains) # number of dimensions
-n = 30
-chains = [Lux.Chain(
-            Dense(dim, n, Lux.σ), 
-            Dense(n, n, Lux.σ), 
-            Dense(n, 1)) for _ in 1:2]
-\end{jllisting}
-We then discretize the system using quadrature training as follows
-
-\begin{jllisting}
-strategy = QuadratureTraining()
-discretization = PhysicsInformedNN(chains, strategy)
-@time prob = discretize(pde_sys, discretization)
-\end{jllisting}
-After this is set-up and a loss function is defined through calling \texttt{PhysicsInformedNN}, we simply need to train the network to find a nice solution. This is done with the \texttt{Optimization.jl} library. We choose the ADAM optimizer over three learning rates: $10^{-3}, 10^{-4}$, and $10^{-7}$ over 10000, 7000, and 1000 epochs respectively. By training the network with successively smaller learning rates, we can improve the accuracy of the solution. This is accomplished in the following code:
-
-\begin{jllisting}
-i = 0
-loss_history = []
-
-callback = function (p,l) 
-	global i += 1
-	if i % 100 == 0
-		println("Current loss is: $l")
-	end
-    append!(loss_history, l)
-	return false 
-end
-
-learning_rates = [1e-3, 1e-4, 1e-7]
-res = @time Optimization.solve(prob, ADAM(learning_rates[1]); callback = callback, maxiters=10000)
-loss_history1 = loss_history
-loss_history = []
-prob = remake(prob, u0=res.minimizer)
-res = @time Optimization.solve(prob, ADAM(learning_rates[2]); callback = callback, maxiters=7000)
-loss_history2 = loss_history
-loss_history = []
-prob = remake(prob, u0=res.minimizer)
-res = @time Optimization.solve(prob, ADAM(learning_rates[3]); callback = callback, maxiters=1000)
-loss_history3 = loss_history
-loss_history = vcat(loss_history1, loss_history2, loss_history3)
-phi = discretization.phi
-\end{jllisting}
-
-The loss is displayed in Fig. \ref{fig:loss_linear} and the results of the above learning are shown in Fig. \ref{fig:results_linear}. Notice the instability of the loss at higher learning rates. Fixing these instabilities is accomplished with a lower learning rate as this requires that over each epoch movement in loss-space is limited. The results demonstrate that our learning was successful. 
-
-\begin{figure}
-\centering
-	\includegraphics[width=0.3\linewidth]{figures/linear_homo_PDE_plots/loss.png}
-	\caption{Value of loss as a function of epoch for the linear system of homogenous PDEs. Three stages of learning are represented with the learning rate labeled. While there are some instabilities in the loss, we ultimately find a nice solution with the final learning rate of $10^{-7}$}
-	\label{fig:loss_linear}
-\end{figure}
-
-\begin{figure}
-\centering
-	\includegraphics[width=0.48\linewidth]{figures/linear_homo_PDE_plots/solution_1.png}
-	\includegraphics[width=0.48\linewidth]{figures/linear_homo_PDE_plots/solution_2.png}
-	\caption{Results of training a neural network to learn the solution of the linear homogenous PDE. Solution $u$ is represented by $u_1$ and $v$ by $u_2$. In both cases, numerical and analytic solutions are shown as well as the difference between numerical and analytic defined by $|u_{numerical} - u_{analytic}|$}
-	\label{fig:results_linear}
-\end{figure}
-
-\subsection{Solving Similarity Solution of Navier-Stokes using \texttt{NeuralPDE.jl}}
-
-In the 1994 paper investigating the Blow-up of solutions to Navier-Stokes equations, Budd \textit{et al.} consider the system of PDEs arising from the Navier-Stokes equations under the geometry of an infinite channel \cite{buddBlowupSystemPartial1994}. In particular, they explore the parabolic partial differential equations perturbed from a similarity solution of the Navier-Stokes given by
-
-\begin{equation}
-\begin{split}
-    \partial_t u_1 + \mu u_2 \partial_x u_1 & = \partial^2_{x} u_1 + u_1^2 - K^2, \,\,\,\,\,\,\,\, 0 < x < 1, 0 < t < T \\
-    \partial_x u_2 & = u, \,\,\,\,\,\,\,\, 0 < x < 1, 0 < t < T
-    \label{eqn:ns_problem}
-\end{split}
-\end{equation}
-with the boundary conditions 
-
-\begin{equation}
-    \partial_x u_1(t,0) = \partial_x u_1(t,1) = u_2(t,0) = u_2(t,1) = 0
-\end{equation}
-and initial condition 
-
-\begin{equation}
-    u_1(x,0) = u_0(x).  
-\end{equation}
-These equations are parameterized by $\mu$, which perturbs the equations from Navier-Stokes. It is the goal of the paper to determine for which values of $\mu$ the solutions ``blow up." We will consider exclusively the case where $\mu = 1$, as this has a nice solution and the resulting system arises from the Navier Stokes equations as discussed below:
-
-\subsubsection{Problem Derivation}
-
-We consider the incompressible Navier-Stokes equations in an infinitely long channel in the $x$- and $z$-direction and finite in the $y$ direction; namely we bound $y$ by $0 < y < 1$. Let $u_1, u_2, u_3$ be velocity fields, $1/\nu$ be the Reynolds number, and $p$ be the pressure. Then, the Navier-Stokes equations read
-
-\begin{equation}
-    \begin{split}
-        \partial_t u_1 - u_1^2 + u_2\partial_yu_1 & = \nu \partial_y^2 u_1 - c(t) \\
-        \partial_t u_2 + u_2 \partial_y u_2 & = \nu \partial_y^2 u_2 - \partial_y p \\
-        \partial_t u_3 - u_3^2 + u_2\partial_y u_3 & = \nu \partial_y^2 u_3 - e(t) \\
-        \partial_y u_2 & = u_1 + u_3. 
-    \end{split}
-\end{equation}
-In order to simplify, let $u_3(y,t) = 0$, $e(t) = 0$ and $\nu = 1$ so that our system becomes 
-
-\begin{equation}
-    \begin{split}
-        \partial_t u_1 - u_1^2 + u_2\partial_yu_1 & = \nu \partial_y^2 u_1 - c(t) \\
-        \partial_t u_2 + u_2 \partial_y u_2 & = \nu \partial_y^2 u_2 - \partial_y p \\
-        \partial_y u_2 & = u_1. 
-    \end{split}
-\label{eqn:partial_system}
-\end{equation}
-Now note that $p(t)$ can be determined once we know $u_1, u_2$ from the above first and last equation as the middle equation of Eqn. \ref{eqn:partial_system} is only dependent on $u_2$. Hence, we write our system as 
-
-\begin{equation}
-    \begin{split}
-        \partial_t u_1 + u_2\partial_yu_1 & = \partial_y^2 u_1 + u_1^2 - c(t) \\
-        \partial_y u_2 & = u_1. 
-    \end{split}
-\end{equation}
-which matches Eqn. \ref{eqn:ns_problem} when $\mu = 1$ and under the condition that $y \rightarrow x$. In order to have a complete solution, we need only finding appropriate inital conditions. The condition $u_2(0,t) = u_2(1,t)$ follows naturally to disallow flow through the walls of the channel. In \cite{buddBlowupSystemPartial1994}, they also employ the boundary condition $\partial_y u_1 = 0$ to obtain the above complete initial conditions. Finally, we require $c(t) \ge 0$ so that we can write $c(t) = K^2$. 
-
-\subsubsection{Solution with PINN and comparison to analytical solution}
-
-Let's now solve this system! Notice that via integration by parts of the first equation in \ref{eqn:ns_problem} we get
-
-\begin{equation}
-    K^2 = 2\int_0^1 u_1^2 \, dx. 
-\end{equation}
-Thus, we solve the system
-
-\begin{equation}
-    \begin{split}
-        \partial_t u_1 & = \partial_x^2 u_1 - u_2 \partial_x u_1 + u_1^2 - 2\int_0^1 u_1^2 \,dx \\
-        0 & = \partial_x u_2 - u_1
-    \end{split}
-\end{equation}
-for $0 < x < 1$ and $0 < t < 1$. Using the same initial conditions as above, we set $u_0(x) = \cos \pi x$, coinciding with the analytical solution given in \cite{benhammoudaAnalyticalSolutionsSystems2014}. Using power-series methods, the authors find the analytical solution to the above system to be
-
-\begin{equation}
-    \begin{split}
-        u_1(t,x) & = e^{-\pi^2t}\cos \pi x \\
-        u_2(t,x) & = \frac{1}{\pi}e^{-\pi^2t} \sin \pi x. 
-    \end{split}
-\end{equation}
-
-We can then solve the problem using \texttt{NeuralPDE.jl}. This differs from the above code only in the definition of an integral through \texttt{Modelingtoolkit.jl} which can simply be done with
-
-\begin{jllisting}
-Ix = Integral(x in DomainSets.ClosedInterval(0, 1))
-\end{jllisting}
-
-In this example we use the sigmoid as our activation function and build a network with one hidden layer of fifteen nodes. The input layer of our network must be the length of the number of parameters defined in our problem. Additionally, we use a different neural network for each solution $u_1$ and $u_2$ of our system, thus we define two neural networks with the set-up described above. The discretization we choose is the quasi random training with 100 points (ADD MORE DESCRIPTION!!). 
-
-For optimization we use the ADAM optimizer and vary the learning rate starting with a rate of 0.1 over 500 epochs, then 0.01 over 2000 epochs, then finally $10^{-4}$ over a final 2000 epochs. The loss over these epochs and learning rates can be seen in Fig. \ref{fig:loss_integro} and the solution can be seen in Fig. \ref{fig:integro_results}.
-
-\begin{figure}
-\centering
-    \includegraphics[width=0.3\linewidth]{figures/integral_PDE_plots/loss.png}
-    \caption{Loss as a function of epoch in training a neural network to learn the solution of the integral PDE presented above. Learning is broken up into three sections with differing learning rate as shown}
-    \label{fig:loss_integro}
-\end{figure}
-
-\begin{figure}
-\centering
-    \includegraphics[width=0.48\linewidth]{figures/integral_PDE_plots/plot_u1.png}
-    \includegraphics[width=0.48\linewidth]{figures/integral_PDE_plots/plot_u2.png}
-    \caption{Results of training a network to learn the solution of the integral PDE. Both numerical and analytical solutions are given with the difference between the two. We see that the numerical solution matches the analytic solution very well.}
-    \label{fig:integro_results}
-\end{figure}
-
-To see the complete implementation of the above, see the data availability statement. 
+For a simple implementation using \texttt{NeuralPDE.jl} see Appendix \ref{neural_PDE_eg} and for a more in-depth example see Appendix \ref{neural_PDE_eg2}. 
 
 %% ---------------------------------------------------------------
 %% SECTION: SOLVING EFE
@@ -654,15 +379,21 @@ is the Schwarzschild radius or the event horizon of the black hole.
 
 \subsection{Technical Implementation}
 
-While this system has a nice, simple analytical solution, finding a numerical solution is not trivial. In particular, starting with Eqn. \ref{eqn:ricci} and then applying the assumptions outlined above as initial conditions yields a PDE problem too big to feasibly solve given the time constrains of this capstone. For this reason, we will use the simplified form of $g_{\mu\nu}$ given in Eqn. \ref{eqn:g_simple} for our implementation. While this yields a system of highly coupled ODEs, employing initial conditions such that a solution is reached is still not trivial. The implementation provided also demonstrates how the problem may be expanded to more dimensions at the cost of significantly longer training times as we use \texttt{NeuralPDE.jl} to solve. Additionally, architecture for expanding to more complex systems is included in the implementation for potential future use. 
+While this system has a nice, simple analytical solution, finding a numerical solution is not trivial. In particular, starting with the system of PDEs given by
 
-The system of equations we ultimately solve can be found by plugging the form of Eqn. \ref{eqn:g_simple} into Eqn. \ref{eqn:ricci}. This results in the system given by 
+\begin{equation}
+    R_{\mu\nu} = 0
+    \label{eqn:ricci_solution}
+\end{equation}
+where the form of $R_{\mu\nu}$ is given in \ref{eqn:ricci}, and then applying the assumptions outlined above as initial conditions yields a PDE problem too big to feasibly solve given the time constrains of this capstone. For this reason, we will use the simplified form of $g_{\mu\nu}$ given in Eqn. \ref{eqn:g_simple} for our implementation. While this yields a system of highly coupled ODEs, employing initial conditions such that a solution is reached is still not trivial. The implementation provided also demonstrates how the problem may be expanded to more dimensions at the cost of significantly longer training times as we use \texttt{NeuralPDE.jl} to solve. Additionally, architecture for expanding to more complex systems is included in the implementation for potential future use. 
+
+The system of equations we ultimately solve can be found by plugging the simplified form for $g_{\mu\nu}$ into our system of equations, Eqn. \ref{eqn:ricci_solution}. This results in the system given by 
 
 \begin{equation}
 \begin{split}
-    4A'B^2 - 2rB''AB + 2A'B'B + rB'^2A & = 0 \\
-    rA'B + 2A^2B - 2AB - rB'A & = 0 \\ 
-    -2rB''AB + rA'B'B + rB'^2A - 4B'AB & = 0
+    2rABA'' - rAA'B' + 4ABA' - rBA'^2 & = 0 \\
+    -2rABA'' + rAA'B' + 4A^2B' + rBA'^2 & = 0 \\ 
+    -2AB + 2AB^2 - rA'B + rAB' & = 0
     \label{eqn:einstein_ODEs}
 \end{split}
 \end{equation}
@@ -733,7 +464,293 @@ Notice that trying to match Newtonian gravity with only $\sim$15 points may not 
 
 Physics-informed neural networks are a versatile and accurate method in solving systems of partial differential equations. In particular, the new implementation in \Julia, \texttt{NeuralPDE.jl}, provides a symbolic interface to easily implement many different PDE structures such as integral-PDEs, systems of PDEs, and this method has the additional ability to add extra information to solving PDEs via addition of an additional loss term. Moreover, very complex objects such as an ODE solver, can be put directly into the loss function in order to implement a boundary condition, or include extra information in solving. 
 
-Our implementation in solving Einstein's field equations to obtain the Schwarzschild metric shows how addition of a complex additional loss term can work at the cost of huge memory use, often resulting in segmentation fault. This error may be fixed in future versions of \texttt{NeuralPDE.jl}. Because this package is so new, differential programming functionality has not been extensively studied. To our knowledge, this is the only attempt which requires use of differential programming. As such, while not entirely sucessful, this implementation is a step in understanding how tools such as \texttt{NeuralPDE.jl} and PINN can have wide application to solving PDEs. 
+Our implementation in solving Einstein's field equations to obtain the Schwarzschild metric shows how addition of a complex additional loss term can work at the cost of huge memory use, often resulting in segmentation fault. This error may be fixed in future versions of \texttt{NeuralPDE.jl}. Because this package is so new, differential programming functionality has not been extensively studied. To our knowledge, this is the only attempt which requires use of differential programming. As such, while not entirely successful, this implementation is a step in understanding how tools such as \texttt{NeuralPDE.jl} and PINN can find wide applications in solving PDEs. 
+
+%% ---------------------------------------------------------------
+%% Appendix! (Primarily Examples)
+%% ---------------------------------------------------------------
+
+\appendix
+
+\section{Example ODE problem solved with a PINN}
+\label{ODE_example}
+	
+Consider the equation
+
+\begin{equation}
+	u' = e^t \cos t
+\end{equation}
+with the initial condition $u(0) = 0.1$. Notice that we can find the solution to this equation via integration, i.e., the solution is given by
+
+\begin{equation}
+	u(t) = \int e^t \cos t \, dt. 
+\end{equation}
+Applying integration by parts twice, we find the solution
+
+\begin{equation}
+	u(t) = \frac{1}{2}e^t(\sin t + \cos t) + C
+\end{equation}
+where $C = -0.4$ via use of the initial condition. 
+
+Let's now solve using the techniques defined above using \Julia and the machine learning package \texttt{Flux.jl}. We begin by defining a neural network with two hidden layers one of 64 nodes the other with 32 nodes using the $\tanh$ activation function and a linear output: 
+
+\begin{jllisting}
+using Flux
+NNODE = Chain(x -> [x], # Take in a scalar and transform it into an array
+           Dense(1,64, tanh),
+           Dense(64, 32, tanh),
+           Dense(32,1),
+           first) # Take first value, i.e. return a scalar
+\end{jllisting}
+We then parametrize the solution and define the loss function in which the differentiation is computed via discretization:
+
+\begin{jllisting}
+g(t) = t*NNODE(t) + 0.1
+
+using Statistics
+ϵ = sqrt(eps(Float32))
+loss() = mean(abs2(((g(t+ϵ)-g(t))/ϵ) - (exp(t) * cos(t))) for t in 0:1f-2:5f0)
+\end{jllisting}
+Notice that we use machine $\epsilon$ here to discretize our integral as this is the smallest possible discretization before floating point error disrupts the solution. We will use gradient descent to solve with a learning rate of $10^{-4}$ over $10^4$ epochs. Because there is no data we are providing to train on, we feed the network empty data. Instead, all of the learning information comes from the loss function defined above. This is accomplished with the following code:
+
+\begin{jllisting}
+epochs = 10_000
+learning_rate = 1e-4
+
+opt = Flux.Descent(learning_rate) # use gradient Descent
+data = Iterators.repeated((), epochs) # no data here : repeat empty data
+iter = 0
+loss_history = []
+cb = function () #callback function to observe training
+  global iter += 1
+  push!(loss_history, loss())
+  if iter % 500 == 0
+    display(loss())
+  end
+end
+display(loss())
+Flux.train!(loss, Flux.params(NNODE), data, opt; cb=cb)
+\end{jllisting}
+We can then see how our network does in comparison to the true solution as shown in the below plot:
+
+\begin{center}
+\includegraphics[width=0.42\linewidth]{figures/ODE_example.png}
+\end{center}
+and we see that our network does pretty well! We could, of course, improve performance by training longer or playing with the size of the network or learning rate, however the above remains a good example of how to utilize neural networks to solve ODEs as is. 
+
+\section{Example using \texttt{NeuralPDE.jl}}
+\label{neural_PDE_eg}
+
+We show how \texttt{NeuralPDE.jl} can be used to solve a simple example and describe the important components of the code. 
+
+Consider the homogeneous system of linear PDEs given by
+
+\begin{equation}
+\begin{split}
+	\partial_t u - \partial_x v + (v + u) & = 0 \\
+	\partial_t v - \partial_t u + (v + u) & = 0
+\end{split}
+\end{equation}
+subject to the initial conditions 
+
+\begin{equation}
+	u(0,x) = \sinh x, \,\,\,\,\,\,\,\, v(0,x) = \cosh x. 
+\end{equation}    
+By means of the so-called Homotopy analysis method, the authors in \cite{samibatainehApproximateAnalyticalSolutions2008} find the analytical solution to this system to be given by 
+
+\begin{equation}
+	u(x,t) = \sinh(x - t), \,\,\,\,\,\,\,\, v(x,t) = \cosh(x - t). 
+\end{equation}
+
+We now solve with \texttt{NeuralPDE.jl}, describing important aspects of the code. To begin, we set up the system symbolically with the aid of \texttt{Modelingtoolkit.jl} as follows:
+
+\begin{jllisting}
+@parameters t x
+@variables u(..) v(..)
+
+Dx = Differential(x)
+Dt = Differential(t)
+
+eqns = [Dt(u(t,x)) - Dx(v(t,x)) + (u(t,x) + v(t,x)) ~ 0,
+        Dt(v(t,x)) - Dx(u(t,x)) + (u(t,x) + v(t,x)) ~ 0]
+
+bcs = [u(0,x) ~ sinh(x), v(0,x) ~ cosh(x)]
+
+domains = [x ∈ Interval(0.0, 1.0),
+            t ∈ Interval(0.0, 1.0)]
+
+@named pde_sys = PDESystem(eqns, bcs, domains, [t,x], [u(t,x), v(t,x)])
+\end{jllisting}
+For systems of equations, store each equation as an element of the vector \texttt{eqn} as with the boundary conditions, \texttt{bcs}. We now define a neural network to solve the problem using the machine learning library \texttt{Lux.jl}. Our network has one hidden layer with 30 nodes, and takes two input variables---one for each parameter of the problem. We output a single number. Notice that each variable $u,v$ of our problem gets its own network. This is implemented simply as
+
+\begin{jllisting}
+dim = length(domains) # number of dimensions
+n = 30
+chains = [Lux.Chain(
+            Dense(dim, n, Lux.σ), 
+            Dense(n, n, Lux.σ), 
+            Dense(n, 1)) for _ in 1:2]
+\end{jllisting}
+We then discretize the system using quadrature training as follows
+
+\begin{jllisting}
+strategy = QuadratureTraining()
+discretization = PhysicsInformedNN(chains, strategy)
+@time prob = discretize(pde_sys, discretization)
+\end{jllisting}
+After this is set-up and a loss function is defined through calling \texttt{PhysicsInformedNN}, we simply need to train the network to find a nice solution. This is done with the \texttt{Optimization.jl} library. We choose the ADAM optimizer over three learning rates: $10^{-3}, 10^{-4}$, and $10^{-7}$ over 10000, 7000, and 1000 epochs respectively. By training the network with successively smaller learning rates, we can improve the accuracy of the solution. This is accomplished in the following code:
+
+\begin{jllisting}
+i = 0
+loss_history = []
+
+callback = function (p,l) 
+	global i += 1
+	if i % 100 == 0
+		println("Current loss is: $l")
+	end
+    append!(loss_history, l)
+	return false 
+end
+
+learning_rates = [1e-3, 1e-4, 1e-7]
+res = @time Optimization.solve(prob, ADAM(learning_rates[1]); callback = callback, maxiters=10000)
+loss_history1 = loss_history
+loss_history = []
+prob = remake(prob, u0=res.minimizer)
+res = @time Optimization.solve(prob, ADAM(learning_rates[2]); callback = callback, maxiters=7000)
+loss_history2 = loss_history
+loss_history = []
+prob = remake(prob, u0=res.minimizer)
+res = @time Optimization.solve(prob, ADAM(learning_rates[3]); callback = callback, maxiters=1000)
+loss_history3 = loss_history
+loss_history = vcat(loss_history1, loss_history2, loss_history3)
+phi = discretization.phi
+\end{jllisting}
+
+The loss is displayed in Fig. \ref{fig:loss_linear} and the results of the above learning are shown in Fig. \ref{fig:results_linear}. Notice the instability of the loss at higher learning rates. Fixing these instabilities is accomplished with a lower learning rate as this requires that over each epoch movement in loss-space is limited. The results demonstrate that our learning was successful. 
+
+\begin{figure}
+\centering
+	\includegraphics[width=0.3\linewidth]{figures/linear_homo_PDE_plots/loss.png}
+	\caption{Value of loss as a function of epoch for the linear system of homogenous PDEs. Three stages of learning are represented with the learning rate labeled. While there are some instabilities in the loss, we ultimately find a nice solution with the final learning rate of $10^{-7}$}
+	\label{fig:loss_linear}
+\end{figure}
+
+\begin{figure}
+\centering
+	\includegraphics[width=0.48\linewidth]{figures/linear_homo_PDE_plots/solution_1.png}
+	\includegraphics[width=0.48\linewidth]{figures/linear_homo_PDE_plots/solution_2.png}
+	\caption{Results of training a neural network to learn the solution of the linear homogenous PDE. Solution $u$ is represented by $u_1$ and $v$ by $u_2$. In both cases, numerical and analytic solutions are shown as well as the difference between numerical and analytic defined by $|u_{numerical} - u_{analytic}|$}
+	\label{fig:results_linear}
+\end{figure}
+
+\section{Solving Similarity Solution of Navier-Stokes using \texttt{NeuralPDE.jl}}
+\label{neural_PDE_eg2}
+
+In the 1994 paper investigating the Blow-up of solutions to Navier-Stokes equations, Budd \textit{et al.} consider the system of PDEs arising from the Navier-Stokes equations under the geometry of an infinite channel \cite{buddBlowupSystemPartial1994}. In particular, they explore the parabolic partial differential equations perturbed from a similarity solution of the Navier-Stokes given by
+
+\begin{equation}
+\begin{split}
+    \partial_t u_1 + \mu u_2 \partial_x u_1 & = \partial^2_{x} u_1 + u_1^2 - K^2, \,\,\,\,\,\,\,\, 0 < x < 1, 0 < t < T \\
+    \partial_x u_2 & = u, \,\,\,\,\,\,\,\, 0 < x < 1, 0 < t < T
+    \label{eqn:ns_problem}
+\end{split}
+\end{equation}
+with the boundary conditions 
+
+\begin{equation}
+    \partial_x u_1(t,0) = \partial_x u_1(t,1) = u_2(t,0) = u_2(t,1) = 0
+\end{equation}
+and initial condition 
+
+\begin{equation}
+    u_1(x,0) = u_0(x).  
+\end{equation}
+These equations are parameterized by $\mu$, which perturbs the equations from Navier-Stokes. It is the goal of the paper to determine for which values of $\mu$ the solutions ``blow up." We will consider exclusively the case where $\mu = 1$, as this has a nice solution and the resulting system arises from the Navier Stokes equations as discussed below:
+
+\subsection{Problem Derivation}
+
+We consider the incompressible Navier-Stokes equations in an infinitely long channel in the $x$- and $z$-direction and finite in the $y$ direction; namely we bound $y$ by $0 < y < 1$. Let $u_1, u_2, u_3$ be velocity fields, $1/\nu$ be the Reynolds number, and $p$ be the pressure. Then, the Navier-Stokes equations read
+
+\begin{equation}
+    \begin{split}
+        \partial_t u_1 - u_1^2 + u_2\partial_yu_1 & = \nu \partial_y^2 u_1 - c(t) \\
+        \partial_t u_2 + u_2 \partial_y u_2 & = \nu \partial_y^2 u_2 - \partial_y p \\
+        \partial_t u_3 - u_3^2 + u_2\partial_y u_3 & = \nu \partial_y^2 u_3 - e(t) \\
+        \partial_y u_2 & = u_1 + u_3. 
+    \end{split}
+\end{equation}
+In order to simplify, let $u_3(y,t) = 0$, $e(t) = 0$ and $\nu = 1$ so that our system becomes 
+
+\begin{equation}
+    \begin{split}
+        \partial_t u_1 - u_1^2 + u_2\partial_yu_1 & = \nu \partial_y^2 u_1 - c(t) \\
+        \partial_t u_2 + u_2 \partial_y u_2 & = \nu \partial_y^2 u_2 - \partial_y p \\
+        \partial_y u_2 & = u_1. 
+    \end{split}
+\label{eqn:partial_system}
+\end{equation}
+Now note that $p(t)$ can be determined once we know $u_1, u_2$ from the above first and last equation as the middle equation of Eqn. \ref{eqn:partial_system} is only dependent on $u_2$. Hence, we write our system as 
+
+\begin{equation}
+    \begin{split}
+        \partial_t u_1 + u_2\partial_yu_1 & = \partial_y^2 u_1 + u_1^2 - c(t) \\
+        \partial_y u_2 & = u_1. 
+    \end{split}
+\end{equation}
+which matches Eqn. \ref{eqn:ns_problem} when $\mu = 1$ and under the condition that $y \rightarrow x$. In order to have a complete solution, we need only finding appropriate inital conditions. The condition $u_2(0,t) = u_2(1,t)$ follows naturally to disallow flow through the walls of the channel. In \cite{buddBlowupSystemPartial1994}, they also employ the boundary condition $\partial_y u_1 = 0$ to obtain the above complete initial conditions. Finally, we require $c(t) \ge 0$ so that we can write $c(t) = K^2$. 
+
+\subsection{Solution with PINN and comparison to analytical solution}
+
+Let's now solve this system! Notice that via integration by parts of the first equation in \ref{eqn:ns_problem} we get
+
+\begin{equation}
+    K^2 = 2\int_0^1 u_1^2 \, dx. 
+\end{equation}
+Thus, we solve the system
+
+\begin{equation}
+    \begin{split}
+        \partial_t u_1 & = \partial_x^2 u_1 - u_2 \partial_x u_1 + u_1^2 - 2\int_0^1 u_1^2 \,dx \\
+        0 & = \partial_x u_2 - u_1
+    \end{split}
+\end{equation}
+for $0 < x < 1$ and $0 < t < 1$. Using the same initial conditions as above, we set $u_0(x) = \cos \pi x$, coinciding with the analytical solution given in \cite{benhammoudaAnalyticalSolutionsSystems2014}. Using power-series methods, the authors find the analytical solution to the above system to be
+
+\begin{equation}
+    \begin{split}
+        u_1(t,x) & = e^{-\pi^2t}\cos \pi x \\
+        u_2(t,x) & = \frac{1}{\pi}e^{-\pi^2t} \sin \pi x. 
+    \end{split}
+\end{equation}
+
+We can then solve the problem using \texttt{NeuralPDE.jl}. This differs from the above code only in the definition of an integral through \texttt{Modelingtoolkit.jl} which can simply be done with
+
+\begin{jllisting}
+Ix = Integral(x in DomainSets.ClosedInterval(0, 1))
+\end{jllisting}
+
+In this example we use the sigmoid as our activation function and build a network with one hidden layer of fifteen nodes. The input layer of our network must be the length of the number of parameters defined in our problem. Additionally, we use a different neural network for each solution $u_1$ and $u_2$ of our system, thus we define two neural networks with the set-up described above. The discretization we choose is the quasi random training with 100 points (ADD MORE DESCRIPTION!!). 
+
+For optimization we use the ADAM optimizer and vary the learning rate starting with a rate of 0.1 over 500 epochs, then 0.01 over 2000 epochs, then finally $10^{-4}$ over a final 2000 epochs. The loss over these epochs and learning rates can be seen in Fig. \ref{fig:loss_integro} and the solution can be seen in Fig. \ref{fig:integro_results}.
+
+\begin{figure}
+\centering
+    \includegraphics[width=0.3\linewidth]{figures/integral_PDE_plots/loss.png}
+    \caption{Loss as a function of epoch in training a neural network to learn the solution of the integral PDE presented above. Learning is broken up into three sections with differing learning rate as shown}
+    \label{fig:loss_integro}
+\end{figure}
+
+\begin{figure}
+\centering
+    \includegraphics[width=0.48\linewidth]{figures/integral_PDE_plots/plot_u1.png}
+    \includegraphics[width=0.48\linewidth]{figures/integral_PDE_plots/plot_u2.png}
+    \caption{Results of training a network to learn the solution of the integral PDE. Both numerical and analytical solutions are given with the difference between the two. We see that the numerical solution matches the analytic solution very well.}
+    \label{fig:integro_results}
+\end{figure}
+
+To see the complete implementation of the above, see the data availability statement. 
 
 %% ---------------------------------------------------------------
 %% BACKBATTER, MISC. 
