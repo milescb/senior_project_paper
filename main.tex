@@ -38,7 +38,7 @@
 % \usepackage{lineno}
 % \linenumbers
 
-%\jname{Physics/Math}
+\jname{Physics/Mathematics}
 \articletype{CAPSTONE PROJECT}
 %\artid{20}
 %\jyear{2022}
@@ -53,7 +53,7 @@
 
 \title[Article Title]{Using Scientific Machine Learning to solve Partial Differential Equations}
 
-\author{Miles Cochran-Branson}\orcid{0000-0002-8514-4315}
+\author{Miles Cochran-Branson}\orcid{0000-0003-1020-1108}
 % \author[2]{Author Name2}\orcid{0000-0001-8823-831X}
 % \author[2]{Author Name3}\orcid{0000-0002-0251-345}
 
@@ -87,9 +87,9 @@ where $m$ is the mass of an object and $x$ is its position, is just one example 
 
 An initiative laid out by the DOE in 2019 outlines the importance and potential of the ever growing field of Scientific Machine Learning \cite{bakerWorkshopReportBasic2019}. In this report, they indicate two computational challenges SciML could potentially solve: lack of data in analysis, and solving differential equations. In the first case, in problems where data is either expensive or impossible to collect, standard implementations of machine learning become impossible. This can be overcome if we incorporate physics knowledge of the system into the neural network. Such implementations make use of \emph{Physics-Informed Neural Networks} (PINN) \cite{karniadakisPhysicsinformedMachineLearning2021}. Additionally, PINN can solve differential equations by slight modification of the lack of data problem \cite{lagarisArtificialNeuralNetworks1997,hanSolvingHighdimensionalPartial2018,blechschmidtThreeWaysSolve2021}. We can even combine these two techniques by including data into solving differential equations to better fit a model or aid in solving the equations \cite{raissiPhysicsinformedNeuralNetworks2019}. A robust implementation of many of these techniques has been underway in the \Julia programming language. Packages that make use of machine learning are part of the \texttt{SciML.jl} universe which includes a basic syntax for code and basic functions in using SciML. Further information on the evolution and current state of the SciML universe can be found from talks from last year's SciML Con \cite{SciMLCon2022}. 
 
-Because of the rapidly growing nature of the field of SciML, documentation on how the techniques and new tools using PINN are used is not always easy to access. This paper seeks to fill in some of the gaps, describing succinctly how SciML can be used to solve differential equations. In particular, we put the newly-released package \texttt{NeuralPDE.jl} to the test to solve several complex differential equations and compare the computational solutions to known analytical solutions. In section \ref{sec:ML}, we will outline the basics of machine learning. In sections \ref{sec:ODE} and \ref{sec:PDE} we will describe how to solve ODEs and PDEs with PINNs. Finally, in section \ref{sec:EFE} we experiment with solving Einstein's field equations to obtain the Schwarzschild Metric using PINN. This problem stretches the limits of PINNs in the application of a complex additional loss term passed to the network during training in order to meet the conditions of the problem. We ultimately find that while we can train a network to approximate the solution of the desired system, more technical development is needed in order to solve such an ambitious problem. For example, in order to have enough physical memory to solve, we would like to use static arrays\footnote{Static arrays have a fixed size and are created on the stack. This means the memory they use is free after use in a function and the array is subsequently destroyed. Moreover, for relatively small arrays, accessing the memory address of these arrays is much faster than allocations to the heap due to the physical location of memory in the machine.} which are not yet supported in \Julia implementations of automatic differentiation.   
+Because of the rapidly growing nature of the field of SciML, documentation on how the techniques and new tools incorporating PINN are used is not always easy to access. This paper seeks to fill in some of the gaps, describing succinctly how SciML can be used to solve differential equations. In particular, we put the newly-released package \texttt{NeuralPDE.jl} to the test to solve several complex differential equations and compare the computational solutions to known analytical solutions. In section \ref{sec:ML}, we will outline the basics of machine learning. In sections \ref{sec:ODE} and \ref{sec:PDE} we will describe how to solve ODEs and PDEs with PINNs. Finally, in section \ref{sec:EFE} we experiment with solving Einstein's field equations to obtain the Schwarzschild Metric using PINN. This problem stretches the limits of PINNs in the application of a complex additional loss term passed to the network during training in order to meet the conditions of the problem. We ultimately find that while we can train a network to approximate the solution of the desired system, more technical development is needed in order to solve such an ambitious problem. For example, in order to have enough physical memory to solve, we would like to use static arrays\footnote{Static arrays have a fixed size and are created on the stack. This means the memory they occupy is free after use in a function and the array is subsequently destroyed. Moreover, for relatively small arrays, accessing the memory address of these arrays is much faster than allocations to the heap due to the physical location of memory in the machine.} which are not yet supported in \Julia implementations of automatic differentiation.   
 
-Although our final application is not perfectly successful, it demonstrates the potential this field has in solving ever more complex problems. The implementation in solving Einstein's field equations makes use of differential programming, something not yet attempted with the \texttt{NeuralPDE.jl} package. Future work in this field will likely make solving this problem more feasible. 
+Although our final application is not perfectly successful, it demonstrates the potential this field has in solving ever more complex problems. The implementation in solving Einstein's field equations makes use of differential programming, something not yet attempted with the \texttt{NeuralPDE.jl} package. Future work in this field will likely make solving this and even more complex problems more feasible. 
 
 %% ---------------------------------------------------------------
 %% SECTION: MACHINE LEARNING
@@ -143,7 +143,7 @@ In order to train a neural network, we need a way in which to evaluate how well 
 \end{equation}
 Such a function is defined such that the smaller the output value, the better the network performs. Thus, training a neural network becomes an optimization problem where we want to minimize the function $\loss(X)$. Typically, the space $X$ is composed of the weights and biases of the network. 
 
-For a very basic idea of how this works, imagine the the graph of $\loss$ as a surface with some collection of minima. We want to find a minimum, so we need to travel in the direction of one. Intuitively, we can compute the gradient and then travel in the direction of the negative gradient to go ``downhill". More specifically, we travel in the $-\nabla \loss(X)$ direction taking discrete steps of size $\Delta x$. After each step we update the network parameters, re-evaluate the loss, compute $-\nabla \loss(X)$ and repeat. We continue in this way for as many steps as the user desires. This process is called gradient descent and the algorithm for finding the gradient is called backpropagation \cite{chauvinBackpropagationTheoryArchitectures1995}. In most cases, it is not necessary to find the global minimum and may even be computationally disadvantageous as finding global minimum can lead to over-fitting \cite{choromanskaLossSurfacesMultilayer2015}. Since the algorithm can get stuck in a ``saddle point" or inadequate local minimum, we often use stochastic methods whose randomness allows the algorithm to escape these pitfalls and continue learning to a better local minimum. This process is called stochastic gradient descent. In the following examples, we will use the ADAM optimizer \cite{kingmaAdamMethodStochastic2017}. 
+For a very basic idea of how this works, imagine the graph of $\loss$ as a surface with some collection of minima. We want to find a minimum, so we need to travel in the direction of one. Intuitively, we can compute the gradient and then travel in the direction of the negative gradient to go ``downhill." More specifically, we travel in the $-\nabla \loss(X)$ direction taking discrete steps of size $\Delta x$. After each step we update the network parameters, re-evaluate the loss, compute $-\nabla \loss(X)$ and repeat. We continue in this way for as many steps as the user desires. This process is called gradient descent and the algorithm for finding the gradient is called backpropagation \cite{chauvinBackpropagationTheoryArchitectures1995}. In most cases, it is not necessary to find the global minimum and may even be computationally disadvantageous as finding global minimum can lead to over-fitting \cite{choromanskaLossSurfacesMultilayer2015}. Since the algorithm can get stuck in a ``saddle point" or inadequate local minimum, we often use stochastic methods whose randomness allows the algorithm to escape these pitfalls and continue learning to a better local minimum. This process is called stochastic gradient descent. In the following examples, we will use the ADAM optimizer \cite{kingmaAdamMethodStochastic2017}. 
 %% Add a few sentences on L-BFGS algorithm here? 
 
 %% SUBSECTION: THE UAT %%
@@ -154,15 +154,15 @@ Why should neural networks be able to solve PDEs? The solutions to PDEs are ofte
 
 \begin{theorem}
 
-Let $x \in \Omega$, let $u(x)$ be a continuous function, and $\net(x,w)$ be a neural network with weights $w$. Then, we can find some arbitrarily small $\epsilon \in \mathbb{R}$ such that 
+Let $x \in \Omega \subseteq \mathbb{R}^n$, $u(x)$ be a continuous function, and $\net(x;w)$ be a neural network with weights $w$. Then, we can find some arbitrarily small $\epsilon \in \mathbb{R}$ such that 
 
 \begin{equation}
-	||\net(x,w) - u(x)|| < \epsilon. 
+	||\net(x;w) - u(x)|| < \epsilon. 
 \end{equation}
 
 \end{theorem}
 
-\noindent Proofs of this theorem are beyond the scope of this report, but are readily available for several different contexts including for classical feed-forward networks \cite{hornikMultilayerFeedforwardNetworks1989, hornikApproximationCapabilitiesMultilayer1991}, finding probability distributions \cite{luUniversalApproximationTheorem2020}, and complex-valued neural networks \cite{voigtlaenderUniversalApproximationTheorem2020}. 
+\noindent Proofs of this theorem are beyond the scope of this report, but are readily available for several different contexts including for classical feed-forward networks \cite{hornikMultilayerFeedforwardNetworks1989, hornikApproximationCapabilitiesMultilayer1991}, finding probability distributions \cite{luUniversalApproximationTheorem2020}, and complex-valued neural networks where $\Omega \subseteq \mathbb{C}^n$ \cite{voigtlaenderUniversalApproximationTheorem2020}. 
 
 There is, however, one big caveat to this theorem: nothing about the problem tells us how big our network should be in order to fulfill the theorem. In some cases, the size of the network may be computationally infeasible to model. Nonetheless, it is this theorem which allows us to be able to have some hope that differential equations can be arbitrarily approximated by neural networks. 
 
@@ -180,30 +180,30 @@ In the rest of the paper, we take these theoretical concepts and apply them to t
 As an illustration of the application of PINN, consider an ordinary differential equation of the form 
 
 \begin{equation}
-	u' = f(u,t). 
+	\frac{du}{dt} = f(u,t). 
 \end{equation}
-The UAT tells us that we should be able to achieve $N(w,t) \approx u(t)$ where $N(w,t)$ is a neural network with weights $w$. Consequently, our neural network must satisfy $N'(w,t) \approx f(N(w,t), t)$. To solve, we discretize the space $\Omega$ where $t \in \Omega$. Subsequently, we define the loss function by 
+The UAT tells us that we should be able to achieve $\net(t;w) \approx u(t)$ where $\net(t;w)$ is a neural network with weights $w$. Consequently, our neural network must satisfy $\net'(t;w) \approx f(\net(t;w), t)$. To solve, we discretize the space $\Omega \subseteq \mathbb{R}$ where $t \in \Omega$. Subsequently, we define the loss function by 
 
 \begin{equation}
-	\loss(w) = \sum_i \left( \frac{d\net(w, t_i)}{dt} - f(\net(w,t_i), t_i)\right)^2. 
+	\loss(w) = \sum_i \left( \frac{d\net(w; t_i)}{dt} - f(\net(t_i;w), t_i)\right)^2, 
 \end{equation}
-Notice that the derivative in the differential equation has been approximated using finite differences. In order to find a unique solution, we apply the initial condition $u(0) = u_0$. We can simply add this to our loss function as 
+where we are summing over some number of samples, hopefully dense enough to accurately capture the difference between our prediction and its supposed values. In order to find a unique solution, we apply the initial condition $u(0) = u_0$. We can simply add this as an additional term to our loss function as 
 
 \begin{equation}
-	\loss(w) = (\net(w,0) - u_0)^2 + \sum_i \left( \frac{d\net(w,t_i)}{dt} - f(\net(w,t_i), t_i),\right)^2
+	\loss(w) = (\net(w,0) - u_0)^2 + \sum_i \left( \frac{d\net(t_i;w)}{dt} - f(\net(t_i;w), t_i) \right)^2.
 \end{equation}
-or we can parametrize the function to learn on, encoding the initial condition in our neural network solution by defining the function 
+Notice that, in order to make solving slightly more efficient, we can encode the initial condition in our neural network solution by defining the function 
 
 \begin{equation}
-	g(w,t) = u_0 - t\net(w,t).
+	g(t;w) = u_0 - t\net(t;w).
 \end{equation}
-This ensures that the initial condition is satisfied and allows us to write down a simpler version of the loss function:
+This ensures that the initial condition is satisfied as $g(0) = u_0$, and $g$ remains a universal approximator. Thus, in this special case, the loss function becomes:
 
 \begin{equation}
-	\loss(w) = \sum_i \left(\frac{dg(w,t_i)}{dt} - f(g(w,t_i), t_i)\right)^2. 
+	\loss(w) = \sum_i \left(\frac{dg(t_i;w)}{dt} - f(g(t_i;w), t_i)\right)^2. 
 \end{equation}
 
-Now that we have defined our problem, we can use standard minimization techniques to find a solution. For a complete example using this technique, see Appendix \ref{ODE_example} and for additional information and further examples see \cite{rackauckasSciMLSciMLBookParallel}. 
+Now that we have defined our problem, we can use standard minimization techniques to find a solution. For a complete example using this technique, see Appendix \ref{ODE_example}. For additional information and further examples see \cite{rackauckasSciMLSciMLBookParallel}. 
 
 %% ---------------------------------------------------------------
 %% SOLVING PDES WITH PINN
@@ -217,50 +217,67 @@ We now turn our attention to solving partial different equations using technique
 Consider a partial differential equation given by 
 
 \begin{equation}
-	f(u(x); \lambda) = 0
+	f(\partial^k_xu(x), \partial^{k-1}_x u(x), \dots, \partial_x u(x), u(x), x; \lambda) = 0,
 \end{equation}
-where $x \in \Omega$ are the independent variables in the space $\Omega$, $u(x)$ is the solution, $f$ is some non-linear function acting on $u$, and $\lambda$ are the parameters of the equation. To solve with a neural network $\net(x, w)$ where $\net$ is a neural network with weights $w$, we want to fulfill 
+where $\Omega$ is an open subset of $\mathbb{R}^n$, $x = (x_1, x_2, \dots, x_n) \in \Omega$ are the independent variables, $u(x)$ is the solution, $k \ge 1$ is an integer representing the highest order (partial) derivative\footnote{We use $\partial_x^k u(x)$ to denote the partial derivative of $u$ of order $k$ with respect to the variable(s) $x$, where $u:\Omega \rightarrow \mathbb{R}$, $\Omega$ is an open subset of $\mathbb{R}^n$, and $x \in \Omega$.} of $u(x)$, and $\lambda$ are the parameters of the equation. Thus, $f$ takes the form
 
 \begin{equation}
-	f(\net(x, w); \lambda) \approx 0.
+    f: \mathbb{R}^{n^k} \times \mathbb{R}^{n^{k-1}} \times \dots \times \mathbb{R}^n \times \mathbb{R} \times \Omega \rightarrow \mathbb{R},
+\end{equation}
+and $u(x)$ takes the form
+
+\begin{equation}
+    u : \Omega \rightarrow \mathbb{R}
+\end{equation}
+as discussed in \cite{evansPartialDifferentialEquations2010}. 
+
+To solve with a neural network $\net(x, w)$ where $\net$ is a neural network with weights $w$, we want to fulfill 
+
+\begin{equation}
+	f(\partial^k_x\net(x;w), \partial^{k-1}_x \net(x;w), \dots, \partial_x \net(x;w), \net(x;w), x; \lambda) = 0.
 	\label{eqn:NNapprox}
 \end{equation}
-The universal approximation theorem tells us that this should be possible. It follows that error of the above equation is then given by 
+For simplicity, we will represent $f(\partial^k_x\net(x;w), \partial^{k-1}_x \net(x;w), \dots, \partial_x \net(x;w), \net(x;w), x; \lambda)$ as $f(\net(x;w); \lambda)$ below. The universal approximation theorem tells us that this should be possible. It follows that we may define the error to be 
 
 \begin{equation}
-	\loss(w) = \int_{\Omega} ||f(\net(x,w); \lambda)||\,dx. 
+	\loss(w) = \int_{\Omega} ||f(\net(x;w); \lambda)||\,dx. 
 	\label{eqn:NNloss}
 \end{equation}
 We have suggestively named the error $\loss$ as we can use this function as a loss function in training our neural network $\net$ by minimizing $\loss$. Our computational problem then reduces to the problem of evaluating the integral in Eqn. \ref{eqn:NNloss} in order to perform minimization. 
 
-Notice that in practical problems, we apply boundary conditions $b_i$ on $\partial \Omega \in \Omega$ in order to obtain, ideally, a unique solution. In order to include this information in the network, we add these conditions in to our loss function giving us 
+In practical problems, we apply boundary conditions $b_i$ on $\partial \Omega \subset \Omega$ in order to obtain, ideally, a unique solution. In order to include this information in the network, we add these conditions to our loss function
 
 \begin{equation}
-	\loss(w) = \sum_i\int_{\Omega\setminus\partial\Omega} ||f_i(\net(x,w); \lambda)||\,dx + \sum_i\int_{\partial\Omega} ||b_i(\net(x,w); \lambda)||\,dx.
+	\loss(w) = \sum_i\int_{\Omega\setminus\partial\Omega} ||f_i(\net(x;w); \lambda)||\,dx + \sum_i\int_{\partial\Omega} ||b_i(\net(x;w); \lambda)||\,dx.
 	\label{eqn:complete_loss} 
 \end{equation}
-where we have generalized the problem to a system of coupled differential equations $f_i$. We must note that $\loss(w)$ does \emph{not necessarily} tell us the error of our problem. While generally the smaller the value of $\loss(w)$ the better our solution is, because $\loss$ is composed of terms from the PDE and from the boundary conditions, $\loss(w)$ no longer is a pure measurement of the error of our solution. 
+where we have generalized the problem to a system of coupled differential equations $f_i$. We must note that $\loss(w)$ does \emph{not necessarily} tell us the accuracy of our solution. It is generally true that smaller values of $\loss(w)$ give better solutions; but because $\loss$ is composed of terms from the PDE \emph{and} from the boundary conditions, $\loss(w)$ no longer tells us purely how closely our solution matches the true solution. It rather is a measure of how closely our solution matches the true solution \emph{and} the boundary conditions or additional conditions we can add to the problem. 
 
 If we can find a way to efficiently evaluate this integral, then we can apply standard minimization algorithms to solve. This necessitates the use of a discretization in order to numerically integrate. 
 
 \subsection{Methods of discretization}
 
-There are several different methods for evaluating the integral in Eqn. \ref{eqn:complete_loss} namely: grid approximation techniques, stochastic grid approximation techniques, and machine learning (quadrature) techniques. A simple grid approximation takes the space $\Omega$ and divides it into units of volume $\Delta V$ with a specific length. The PDE is evaluated at each of this points and scaled by the volume, thus our integral is computed via 
+There are several different methods for evaluating the integral in Eqn. \ref{eqn:complete_loss}. There are grid approximation techniques, stochastic grid approximation techniques, and machine learning (quadrature) techniques. A simple grid approximation takes the space $\Omega$ and divides it into units of volume $\Delta V$ with a specific length. The PDE is evaluated at each of this points and scaled by the volume, thus our integral is computed via 
 
 \begin{equation}
-	\int_{\Omega} ||f(\net(x,w); \lambda)||\,dx = \sum_i \Delta V ||f(x_i)||.
+	\int_{\Omega} ||f(\net(x;w); \lambda)||\,dx = \sum_i \Delta V ||f(\net(x_i;w); \lambda)||.
 \end{equation}
-This method has two main disadvantages: 1) as the dimension of the problem increases, the number of points we sample increases exponentially in order to maintain the same granularity and 2) no evaluation of the integral is done between grid points, thus information can be quickly lost. To solve the second problem, we can use stochastic methods of sampling---i.e., Monte Carlo techniques to evaluate the integral. This can be described by 
+This method has two main disadvantages. First, as the dimension $n$ of $\mathbb{R}^n$ increases, the number of sample points required in order to maintain the same accuracy for lower $n$ increases exponentially. This is the so-called ``curse of dimensonality" as an exponentially increasing number of sampling points quickly renders a problem computationally impossible or very slow to solve. Second, no evaluation of the integral is done between grid points, thus information is quickly lost. To solve the second problem, we can use stochastic methods of sampling---i.e., Monte Carlo techniques to evaluate the integral. To do this, we take a random sample $(x_1, x_2, \dots x_n) \in \Omega$ and then evaluate the integral by
 
 \begin{equation}
-	\int_{\Omega} ||f(\net(x,w); \lambda)||\,dx = \alpha \sum_i ||f(x_i)||.
+	\int_{\Omega} ||f(\net(x;w); \lambda)||\,dx = \alpha \sum_i ||f(\net(x_i;w); \lambda)||.
 \end{equation}
-for some scalar $\alpha$. As we simply want to minimize this integral, there is no need to specify $\alpha$. This problem still suffers from dimensionality exponentially increasing. Thus, we turn to a third method: quadrature training with a neural network. Several processes for specifying quadrature are described in \cite{riveraQuadratureRulesSolving2022}. These are typically of the form 
+where $\alpha = V/N$, $N$ is the number of samples $x_i \in \Omega$, and $V$ is the volume element of $\Omega$ defined by
 
 \begin{equation}
-	\int_{\Omega} ||f(\net(x,w); \lambda)||\,dx = \sum_i \alpha_i ||f(x_i)||\,dx.
+    V = \int_{\Omega} dx. 
 \end{equation}
-In the implementation via \texttt{NeuralPDE.jl}, this is accomplished using the \texttt{Integrals.jl} package which calls the \Julia differential equation solver \cite{rackauckasDifferentialEquationsJlPerformant2017} to find the correct sampling points $x_i$ and weights $\alpha_i$ in an implementation of Gaussian quadrature rules. Because \texttt{NeuralPDE} is still in its infancy, quadrature techniques are often not as accurate as Monte Carlo (called quasi-random in the \texttt{NeuralPDE} implementation). In exmaples and in the following implementation, we use both Quadrature methods and Quasi-Random methods and pick which yields the best performance. 
+As we simply want to minimize this integral, there is no need to calculate $\alpha$. This problem still suffers from the curse of dimensonality as the number of points required to accurately calculate this integral $N$ remain fixed. Thus, we turn to a third method: quadrature training with a neural network. Several processes for specifying quadrature are described in \cite{riveraQuadratureRulesSolving2022}. These are typically of the form 
+
+\begin{equation}
+	\int_{\Omega} ||f(\net(x;w); \lambda)||\,dx = \sum_i \alpha_i ||f(\net(x_i;w); \lambda)||\,dx.
+\end{equation}
+In the implementation via \texttt{NeuralPDE.jl}, this is accomplished using the \texttt{Integrals.jl} package which calls the \Julia differential equation solver \cite{rackauckasDifferentialEquationsJlPerformant2017} to find the correct sample points $x_i$ and weights $\alpha_i$ in an implementation of Gaussian quadrature rules. This method is different from those presented above, as the number of points $N$ are not fixed prior to solving, rather are determined by an error estimate by the algorithm in \texttt{Integrals.jl}. Ideally, this algorithm picks many sample points where there are interesting features of the solution and fewer points where there are not as interesting features. Because \texttt{NeuralPDE} is still in its infancy, quadrature techniques are often not as accurate as Monte Carlo (called \texttt{QuasiRandomTraining} in the \texttt{NeuralPDE} implementation) techniques. In particular, with the addition of complex additional-loss terms, the quadrature algorithm is not able to identify which areas in space are more important than others. Moreover, in high-dimensional integrals, \cite{riveraQuadratureRulesSolving2022} find that often Monte-Carlo techniques converge faster and are more accurate than quadrature techniques. Thus, in the examples and in the following implementation, we use both Quadrature methods and Quasi-Random methods and pick which yields the best performance. 
 
 For a simple implementation of the techniques discussed in this section using the \texttt{NeuralPDE.jl} architecture, see Appendix \ref{neural_PDE_eg} and for a more in-depth example see Appendix \ref{neural_PDE_eg2}. 
 
@@ -271,11 +288,11 @@ For a simple implementation of the techniques discussed in this section using th
 \section{Solving Einstein's Field Equations to obtain the Schwarzschild Metric using \texttt{NeuralPDE.jl}}
 \label{sec:EFE}
 
-We find a numerical solution to Einstein's field equations resulting in the Schwarzschild Metric as first described by Schwarzschild in 1916 \cite{schwarzschildGravitationalFieldMass1999} by using PINN techniques and mathematical simplifications. This problem has the benefit that it both tests the limits of what neural networks can do while still having a nice analytical solution which we can compare our result to.  
+We find a numerical solution to Einstein's field equations resulting in the Schwarzschild Metric as first described by Schwarzschild in 1916 \cite{schwarzschildGravitationalFieldMass1999} by using PINN techniques and mathematical simplifications. This problem has the benefit that it both tests the limits of what neural networks can do while still having a nice analytical solution to which we can compare our result. We also use this example to experiment with using differentiable programming to implement a boundary condition, that the field equations should reproduce Newtonian gravity in certain limiting cases.
 
 \subsection{Physics Background and Problem Set-up}
 
-Solutions to the Einstein field equations seek to describe space-time, mathematically encapsulated in the space-time metric tensor $g_{\mu\nu}$ the stress-energy tensor $T_{\mu\nu}$ . We will consider the problem of a massive black hole which is 1) uncharged and 2) non-rotating following the detailed solution given in \cite{eigenchrisRelativity108aSchwarzschild}. To find $g_{\mu\nu}$, consider Einstein's field equations given by 
+Solutions to the Einstein field equations seek to describe space-time, mathematically encapsulated in the space-time metric tensor $g_{\mu\nu}$ and the stress-energy tensor $T_{\mu\nu}$ . We will consider the problem of a massive black hole which is 1) uncharged and 2) non-rotating following the detailed solution given in \cite{eigenchrisRelativity108aSchwarzschild}. To find $g_{\mu\nu}$, consider Einstein's field equations given by 
 
 \begin{equation}
     R_{\mu\nu} - \frac{1}{2}R g_{\mu\nu} + \Lambda g_{\mu\nu} = \frac{8 \pi G}{c^4}T_{\mu\nu}.
@@ -286,7 +303,7 @@ We will consider space-time outside the black hole which we assume to be empty. 
 \begin{equation}
 \begin{split}
     R_{\mu\nu} - \frac{1}{2}Rg_{\mu\nu} & = 0 \\
-    R_{\mu\nu}g^{\mu\nu} - \frac{1}{2}Rg_{mu\nu}g^{\mu\nu} & = 0 \\
+    R_{\mu\nu}g^{\mu\nu} - \frac{1}{2}Rg_{\mu\nu}g^{\mu\nu} & = 0 \\
     R - 2R & = 0 \\ 
     R_{\mu\nu} & = 0 \implies \boxed{R_{\mu\nu} = 0}. 
 \end{split}
@@ -311,7 +328,7 @@ Finally, define the metric tensor as
         g_{10} & g_{11} & g_{12} & g_{13} \\
         g_{20} & g_{21} & g_{22} & g_{23} \\
         g_{30} & g_{31} & g_{32} & g_{33}
-    \end{pmatrix}
+    \end{pmatrix},
 \end{equation}
 where we use the space-time indices $(0,1,2,3)$ corresponding to the variables $(\tau=ct, \rho, \theta, \phi)$ in spherical coordinates. 
 
@@ -388,7 +405,7 @@ where
 \begin{equation}
     r_s = \frac{2GM}{c^2}
 \end{equation}
-is the Schwarzschild radius or the event horizon of the black hole. 
+is the Schwarzschild radius or the event horizon of the black hole. This is the analytical solution we will try to reproduce numerically in the next section.
 
 \subsection{Technical Implementation}
 
@@ -430,7 +447,7 @@ We still need to find a way to match Newtonian gravity in the limit of low veloc
 
 Unfortunately, implementing this is not a trivial task. Notice that in order for the network to learn or perform backpropogation, the differential equation given in Eqn. \ref{eqn:geo_low_v} must be solved \emph{inside the loss function}. Thus, in order to move towards a better solution, we must be able to take the derivative of an ODE solver: a clear application for the recent paradigm called differentiable programming \cite{innesDifferentiableProgrammingSystem2019,baydinAutomaticDifferentiationMachine2018}. Moreover, solutions to the simple Newtonian version can quickly blow-up or require advanced solving techniques for slight changes in initial parameters of the problem. This makes solving within the loss function potentially very unstable. 
 
-In order to partially overcome an unstable loss, we pick a solution to the Newtonian problem which slowly moves away from a stable orbit. In addition, we solve only in the $xy$-plane so as to eliminate as much computational pressure as possible. By placing our particle on the $x$-axis with velocity completely in the $y$-direction, namely we place it at $(15 \si{AU}, 0 \si{AU})$ with velocity $(0 \si{AU/yr}, 100 \si{AU/yr})$, we accomplish these conditions. Solving over the time interval $t = (0, 0.03)$ with \texttt{DifferentialEquations.jl} yields the solution shown in Fig. \ref{fig:newton_sol}. This is, of course, only a part of the trajectory of the particle. In order to show what a complete solution would look like, we plot over the time interval $t = (0.0, 1.0)$. 
+In order to partially overcome an unstable loss, we pick a solution to the Newtonian problem which slowly moves away from a stable orbit. In addition, we solve only in the $xy$-plane so as to eliminate as much computational pressure as possible. By placing our particle on the $x$-axis with velocity completely in the $y$-direction, namely we place it at $(15 \si{AU}, 0 \si{AU})$ with velocity $(0 \si{AU/yr}, 100 \si{AU/yr})$, we accomplish these conditions. Solving over the time interval $t = (0, 0.03)$ with \texttt{DifferentialEquations.jl} yields the solution shown in Fig. \ref{fig:newton_sol}. This is, of course, only a part of the trajectory of the particle. In order to show what a complete solution would look like, we plot over the time interval $t = (0.0, 1.0)$. To see our solution implementation, refer to the data-availability statement at the end of this paper. 
 
 \begin{figure}
     \centering
@@ -442,14 +459,14 @@ In order to partially overcome an unstable loss, we pick a solution to the Newto
 
 \subsection{Results and Discussion}
 
-Now that we have the system setup, we can attempt to solve for the remaining component of the metric tensor $g$, namely for the functions $A(r)$ and $B(r)$ as described in the system of ODEs we derived above in Eqn. \ref{eqn:einstein_ODEs}. We use a network with two hidden layers both with the sigmoid activation function. Each hidden layer contains ten nodes each. Weights in the network are initialized uniformly according to the Glorot paper \cite{glorotUnderstandingDifficultyTraining2010}. Training is done with the BFGS and limited memory BFGS algorithm \cite{liuLimitedMemoryBFGS1989} over fifteen epochs. One solution obtained through these methods is shown in Fig. \ref{fig:best} while Fig. \ref{fig:before} shows a solution where matching Newtonian gravity was \emph{not} employed. Notice that quantitatively there is no real difference between these solutions, however qualitatively, after applying the condition to match Newtonian gravity, our solution better matches the shape of the true solution. In particular, the solution with Newtonian gravity matching better matches the shape of $A(r)$ and largely matches the shape of $B(r)$. The evident peak in $B(r)$ in Fig. \ref{fig:best} can be explained by the proximity of the solution to the mathematical singularity at $r_s$. Because the true solution diverges to $+\infty$ and $-\infty$ at $r_s$, our algorithm could be tricked by the asymptote to $-\infty$, giving our solution for $B(r)$ its sharply peaked shape. 
+Now that we have the system setup, we can attempt to solve for the remaining component of the metric tensor $g_{\mu,\nu}$, namely for the functions $A(r)$ and $B(r)$ as described in the system of ODEs we derived above in Eqn. \ref{eqn:einstein_ODEs}. We use a network with two hidden layers both with the sigmoid activation function. Each hidden layer contains ten nodes each. Weights in the network are initialized uniformly according to the Glorot paper \cite{glorotUnderstandingDifficultyTraining2010}. Training is done with the BFGS and limited memory BFGS algorithm \cite{liuLimitedMemoryBFGS1989} over fifteen epochs. One solution obtained through these methods is shown in Fig. \ref{fig:best} while Fig. \ref{fig:before} shows a solution where matching Newtonian gravity was \emph{not} employed. Notice that quantitatively there is no real difference between these solutions, as measured by the loss function. However, qualitatively, after applying the condition to match Newtonian gravity, our solution better matches the shape of the true solution. In particular, the solution with Newtonian gravity better matches the shape of $A(r)$ and largely matches the shape of $B(r)$. The evident peak in $B(r)$ in Fig. \ref{fig:best} can be explained by the proximity of the solution to the mathematical singularity at $r_s$. Because the true solution diverges to $+\infty$ and $-\infty$ at $r_s$, our algorithm could be tricked by the asymptote to $-\infty$, giving our solution for $B(r)$ its sharply peaked shape. 
 
 \begin{figure}
     \centering
     \includegraphics[width=0.3\linewidth]{figures/plots_before/loss.png}
     \includegraphics[width=0.3\linewidth]{figures/plots_before/A.png}
     \includegraphics[width=0.3\linewidth]{figures/plots_before/B.png}
-    \caption{Solution of simplified ODEs in Eqn. \ref{eqn:einstein_ODEs}. Solutions is \emph{not} forced to match Newtonian gravity. The left panel shows the loss over the training internal, while the right two panels show the solutions $A(r)$ and $B(r)$.}
+    \caption{Solution of simplified ODEs in Eqn. \ref{eqn:einstein_ODEs}. Solutions are \emph{not} forced to match Newtonian gravity. The left panel shows the loss over the training internal, while the right two panels show the solutions $A(r)$ and $B(r)$.}
     \label{fig:before}
 \end{figure}
 
@@ -471,9 +488,11 @@ One of the greatest challenges in solving this problem is managing physical memo
     \label{fig:compare_newton}
 \end{figure}
 
-Notice that trying to match Newtonian gravity with only $\sim$15 points may not work super well. Additionally, our choice of Newton solution highly influences how we match. Because we are limited in the number of points we can choose, we cannot pick an orbit which goes completely around the black hole as this would be too discontinuous to model with so few points. Thus, after training the typical comparison we get to Newtonian gravity is not such an ideal match as shown in Fig. \ref{fig:compare_newton}. This could be solved by adding more points to the solutions of additional loss; however, as mentioned previously, this results in a segmentation fault. 
+Notice that trying to match Newtonian gravity with only $\sim$15 points may not work super well, but memory constraints force this upon us. Additionally, our choice of the Newtonian solution with which to compare highly influences how we match. Because we are limited in the number of points we can choose, we cannot pick an orbit which goes completely around the black hole as this would be too discontinuous to model with so few points. Thus, after training, the typical comparison with Newtonian gravity is not such an ideal match as shown in Fig. \ref{fig:compare_newton}. This could be solved by adding more points to the solutions of additional loss; however, as mentioned previously, this results in a segmentation fault. 
 
-There are several potential ways to solve this memory problem including using \texttt{StaticArrays.jl} to store the vectors of points from the ODE solver. Unfortunately, the architecture in \Julia for automatic differentiation---the method used in differential programming to compute derivatives---does not support statically typed arrays. Additionally, running on the GPU would both speed up computation as well as manage memory better. However, the GPU architecture in \Julia for automatic differentiation in this context has yet to be implemented. Both of these limitations exhibit how new this research is. The fact that the above implementation even works is a clear indication of how important it is to continue developing tools in SciML. 
+Another problem that could be addressed in the future is the fact that we are using only one example solution to match the network solution to Newtonian gravity. Randomly picking initial conditions for solving the ODE problem may help in solving this problem but would require putting not one but \emph{two} ODE solvers in the additional loss function: one for solving the Newtonian problem, and one for solving the Geodesic equation including the network solution. A more achievable future improvement would be to previously solve many examples of the Newtonian ODE for various initial conditions and try to match all of these within the additional loss function. Again, this would very quickly run into memory problems as this would necessitate solving more than one ODE per epoch within this additional loss function. In order to avoid this, every epoch could focus on trying to match a different set of ODE initial conditions, however this may not work as this would mean an ever-changing problem which a network may not be able to predict. 
+
+There are several potential ways to solve this memory problem including using \texttt{StaticArrays.jl} to store the vectors of points from the ODE solver. Unfortunately, the architecture in \Julia for automatic differentiation---the method used in differential programming to compute derivatives---does not support statically typed arrays. Additionally, running on the GPU would both speed up computation as well as manage memory better. However, the GPU architecture in \Julia for automatic differentiation in this context has yet to be implemented. Both of these limitations exhibit how new this research is. The fact that the above implementation still works despite these memory limitations is a clear indication of how important it is to continue developing tools in SciML. 
 
 %% ---------------------------------------------------------------
 %% SECTION: CONCLUSION
@@ -481,11 +500,9 @@ There are several potential ways to solve this memory problem including using \t
 
 \section{Conclusion}
 
-Physics-informed neural networks are a versatile, efficient, and accurate method in solving systems of partial differential equations. In particular, the newly released package \texttt{NeuralPDE.jl}, provides a symbolic interface to easily implement many different PDE structures. These include but are not limited to integral-PDEs, systems of PDEs. Moreover, this method has the ability to include extra information in solving PDEs via addition of yet another term to the loss function. Moreover, very complex objects such as an ODE solver can be put directly into the loss function in order to implement a boundary condition, or include extra information in solving. This lets us not only solve inverse problems with ease, but also include complex structures into our PDE models. 
+Physics-informed neural networks are a versatile, efficient, and accurate method in solving systems of partial differential equations. In particular, the newly released package \texttt{NeuralPDE.jl}, provides a symbolic interface to easily implement many different PDE structures. These include but are not limited to integral-PDEs, systems of PDEs, and non-homogeneous, non-linear PDEs. Moreover, this method has the ability to include extra information in solving PDEs via addition of yet another term to the loss function. Moreover, very complex objects such as an ODE solver can be put directly into the loss function in order to implement a boundary condition, or include extra information in solving. This lets us not only solve inverse problems with ease, but also include complex structures into our PDE models. 
 
 Our implementation in solving Einstein's field equations to obtain the Schwarzschild metric shows how addition of a complex additional loss term can work at the cost of huge memory use, often resulting in segmentation fault. This error may be fixed in future versions of \texttt{NeuralPDE.jl} or with the continued development of the SciML ecosystem in \Julia. Because this package is so new, differential programming functionality has not been extensively studied in many of the dependencies of \texttt{NeuralPDE}. To our knowledge, this is the only attempt at using PINN to solve a system of PDEs which requires use of differential programming. As such, while not perfectly successful, this implementation is a step in understanding how tools such as \texttt{NeuralPDE.jl} and PINN can find wide applications in solving PDEs. 
-
-We are very excited about the enormous future of this emerging field in scientific computing!
 
 %% ---------------------------------------------------------------
 %% Appendix! (Primarily Examples)
@@ -499,7 +516,7 @@ We are very excited about the enormous future of this emerging field in scientif
 Consider the equation
 
 \begin{equation}
-	u' = e^t \cos t
+	\frac{du}{dt} = e^t \cos t
 \end{equation}
 with the initial condition $u(0) = 0.1$. Notice that we can find the solution to this equation via integration, i.e., the solution is given by
 
@@ -752,7 +769,7 @@ We can then solve the problem using \texttt{NeuralPDE.jl}. This differs from the
 Ix = Integral(x in DomainSets.ClosedInterval(0, 1))
 \end{jllisting}
 
-In this example we use the sigmoid as our activation function and build a network with one hidden layer of fifteen nodes. The input layer of our network must be the length of the number of parameters defined in our problem. Additionally, we use a different neural network for each solution $u_1$ and $u_2$ of our system, thus we define two neural networks with the set-up described above. The discretization we choose is the quasi random training with 100 points (ADD MORE DESCRIPTION!!). 
+In this example we use the sigmoid as our activation function and build a network with one hidden layer of fifteen nodes. The input layer of our network must be the length of the number of parameters defined in our problem. Additionally, we use a different neural network for each solution $u_1$ and $u_2$ of our system, thus we define two neural networks with the set-up described above. The discretization we choose is the quasi random training with 100 points. 
 
 For optimization we use the ADAM optimizer and vary the learning rate starting with a rate of 0.1 over 500 epochs, then 0.01 over 2000 epochs, then finally $10^{-4}$ over a final 2000 epochs. The loss over these epochs and learning rates can be seen in Fig. \ref{fig:loss_integro} and the solution can be seen in Fig. \ref{fig:integro_results}.
 
@@ -774,7 +791,7 @@ For optimization we use the ADAM optimizer and vary the learning rate starting w
 To see the complete implementation of the above, see the data availability statement. 
 
 %% ---------------------------------------------------------------
-%% BACKBATTER, MISC. 
+%% BACKMATTER, MISC. 
 %% ---------------------------------------------------------------
 
 \begin{Backmatter}
@@ -783,7 +800,7 @@ To see the complete implementation of the above, see the data availability state
 
 I am very grateful for the mentorship of Alex Heaton and Megan Pickett in working on this project. Additionally, none of this would have been possible without the education I have received at Lawrence University. I would like to thank the Physics and Mathematics department for their support and all of the opportunities I have had through both departments. 
 
-\paragraph{Data Availability Statement} All code presented above can be found in my Github, \href{https://github.com/lvb5/solve\_PDEs\_with\_PINN}{github.com/lvb5}. Find examples in the \texttt{src} folder. All code for solving the Einstein field equations is in \texttt{src/solve\_einstein}.  
+\paragraph{Data Availability Statement} All code presented above can be found in my Github, \href{https://github.com/lvb5/solve\_PDEs\_with\_PINN}{github.com/lvb5},9 in the repository \texttt{solve\_PDEs\_with\_PINN}. Find examples in the \texttt{src} folder. All code for solving the Einstein field equations is in \texttt{src/solve\_einstein}.  
 
 \bibliography{references}
 \bibliographystyle{ieeetr}
