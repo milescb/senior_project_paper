@@ -109,7 +109,7 @@ Machine learning and artificial intelligence are prominent features of our every
 A neural network is simply a function composed primarily of layers of matrix multiplication, but also of non-linear activation functions and bias vectors within the function \cite{strangLinearAlgebraLearning2019, bishopPatternRecognitionMachine2006}. As input, a neural network can take a scalar, vector, matrix, or sometimes tensor with a user-specified size or dimension and gives as an output a vector or scalar. Thus, our network $\net$ takes the form
 
 \begin{equation}
-    \net : \mathbb{R}^{\Theta} \rightarrow \mathbb{R}^{\ell}
+    \net \colon \mathbb{R}^{\Theta} \rightarrow \mathbb{R}^{\ell}
 \end{equation}
 where $\Theta$ is the user-defined input space, and $\ell$ is the number of desired output features. Networks have a fixed size defined by the number of \Define{hidden layers} and the number of \Define{nodes} within each hidden layer. 
 
@@ -139,7 +139,7 @@ Now that we have built some neural network, we would like to have it make some u
 In order to train a neural network, we need a way in which to evaluate how well the network is doing given a specific task. This is achieved with a \emph{loss function}. The loss function takes an input of all of the parameters of the network that can change, $X$, and outputs a single number, thus, our loss function is of the form
 
 \begin{equation}
-    \loss : \mathbb{R}^{\textrm{size}(X)} \rightarrow \mathbb{R}. 
+    \loss \colon \mathbb{R}^{\textrm{size}(X)} \rightarrow \mathbb{R}. 
 \end{equation}
 Such a function is defined such that the smaller the output value, the better the network performs. Thus, training a neural network becomes an optimization problem where we want to minimize the function $\loss(X)$. Typically, the space $X$ is composed of the weights and biases of the network. 
 
@@ -219,15 +219,15 @@ Consider a partial differential equation given by
 \begin{equation}
 	f(\partial^k_xu(x), \partial^{k-1}_x u(x), \dots, \partial_x u(x), u(x), x; \lambda) = 0,
 \end{equation}
-where $\Omega$ is an open subset of $\mathbb{R}^n$, $x = (x_1, x_2, \dots, x_n) \in \Omega$ are the independent variables, $u(x)$ is the solution, $k \ge 1$ is an integer representing the highest order (partial) derivative\footnote{We use $\partial_x^k u(x)$ to denote the partial derivative of $u$ of order $k$ with respect to the variable(s) $x$, where $u:\Omega \rightarrow \mathbb{R}$, $\Omega$ is an open subset of $\mathbb{R}^n$, and $x \in \Omega$.} of $u(x)$, and $\lambda$ are the parameters of the equation. Thus, $f$ takes the form
+where $\Omega$ is an open subset of $\mathbb{R}^n$, $x = (x_1, x_2, \dots, x_n) \in \Omega$ are the independent variables, $u(x)$ is the solution, $k \ge 1$ is an integer representing the highest order (partial) derivative\footnote{We use $\partial_x^k u(x)$ to denote the partial derivative of $u$ of order $k$ with respect to the variable(s) $x$, where $u\colon\Omega \rightarrow \mathbb{R}$, $\Omega$ is an open subset of $\mathbb{R}^n$, and $x \in \Omega$.} of $u(x)$, and $\lambda$ are the parameters of the equation. Thus, $f$ takes the form
 
 \begin{equation}
-    f: \mathbb{R}^{n^k} \times \mathbb{R}^{n^{k-1}} \times \dots \times \mathbb{R}^n \times \mathbb{R} \times \Omega \rightarrow \mathbb{R},
+    f\colon \mathbb{R}^{n^k} \times \mathbb{R}^{n^{k-1}} \times \dots \times \mathbb{R}^n \times \mathbb{R} \times \Omega \rightarrow \mathbb{R},
 \end{equation}
 and $u(x)$ takes the form
 
 \begin{equation}
-    u : \Omega \rightarrow \mathbb{R}
+    u \colon \Omega \rightarrow \mathbb{R}
 \end{equation}
 as discussed in \cite{evansPartialDifferentialEquations2010}. 
 
